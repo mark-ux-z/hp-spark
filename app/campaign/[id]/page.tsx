@@ -67,7 +67,7 @@ export default function CampaignPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F1F1] flex flex-col">
-        <TopBar />
+        <TopBar activeTab="campaign" onTabChange={() => {}} apiKeySet={false} onApiKeyClick={() => {}} />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2 text-[#6B7280]">
             <Loader2 size={18} className="animate-spin" />
@@ -81,7 +81,7 @@ export default function CampaignPage() {
   if (!campaign) {
     return (
       <div className="min-h-screen bg-[#F1F1F1] flex flex-col">
-        <TopBar />
+        <TopBar activeTab="campaign" onTabChange={() => {}} apiKeySet={false} onApiKeyClick={() => {}} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm text-[#6B7280]">Campaign not found.</p>
         </div>
@@ -91,7 +91,7 @@ export default function CampaignPage() {
 
   return (
     <div className="min-h-screen bg-[#F1F1F1] flex flex-col">
-      <TopBar />
+      <TopBar activeTab="campaign" onTabChange={() => {}} apiKeySet={false} onApiKeyClick={() => {}} />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto">

@@ -1,49 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateIdeas } from "@/lib/claude";
-import { buildIdeaGenerationPrompt } from "@/lib/prompts";
-import { supabase } from "@/lib/supabase";
+import { generateConcepts } from "@/lib/claude";
+import { buildConceptGenerationPrompt } from "@/lib/prompts";
+import type { CampaignFormData } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const { brandName, brandContext, filenames } = await req.json();
+    const body = await req.json();
+    const {
+      brandName,
+      productType,
+      campaignSeason,
+      targetAudience,
+      brandPersonality,
+      selectedColor,
+      apiKey,
+    } = body;
 
     if (!brandName) {
       return NextResponse.json({ error: "brandName is required" }, { status: 400 });
     }
 
-    const context = brandContext || `${brandName} FMCG brand`;
-    const prompt = buildIdeaGenerationPrompt(brandName, context, filenames ?? []);
-    const ideas = await generateIdeas(prompt);
+    const formData: CampaignFormData = {
+      brandName,
+      productType: productType ?? "FMCG",
+      campaignSeason: campaignSeason ?? "Always-on",
+      targetAudience: targetAudience ?? "General",
+      brandPersonality: brandPersonality ?? `${brandName} brand`,
+      selectedColor: selectedColor ?? "#0096D6",
+    };
 
-    // Create campaign
-    const { data: campaign, error: campaignError } = await supabase
-      .from("campaigns")
-      .insert({
-        user_id: "demo-user",
-        status: "draft",
-        brand_name: brandName,
-        brand_context: context,
-        asset_filenames: filenames ?? [],
-      })
-      .select()
-      .single();
+    const prompt = buildConceptGenerationPrompt(formData);
+    const concepts = await generateConcepts(prompt, apiKey);
 
-    if (campaignError) throw campaignError;
-
-    // Insert ideas
-    const ideaRows = ideas.map((idea) => ({
-      campaign_id: campaign.id,
-      title: idea.title,
-      description: idea.description,
-      strategy_type: idea.strategy_type,
-    }));
-
-    const { error: ideasError } = await supabase.from("ideas").insert(ideaRows);
-    if (ideasError) throw ideasError;
-
-    return NextResponse.json({ campaignId: campaign.id });
+    return NextResponse.json({ concepts });
   } catch (err) {
-    const message = err instanceof Error ? err.message : (typeof err === "object" ? JSON.stringify(err) : String(err));
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
