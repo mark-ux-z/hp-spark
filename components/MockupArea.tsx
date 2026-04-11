@@ -1,0 +1,197 @@
+"use client";
+
+import { useState } from "react";
+import { Zap, Maximize2, AlertTriangle } from "lucide-react";
+import Lightbox from "./Lightbox";
+import type { MockupStyle } from "@/lib/supabase";
+
+type MockupStep = "building" | "calling" | "saving";
+
+const stepLabels: Record<MockupStep, string> = {
+  building: "Building prompt...",
+  calling: "Calling Nano Banana 2...",
+  saving: "Saving to database...",
+};
+
+const STYLE_OPTIONS: Record<keyof MockupStyle, string[]> = {
+  shot:   ["Studio", "Lifestyle", "Flat lay"],
+  mood:   ["Clean & Bright", "Soft & Natural", "Bold & Dramatic"],
+  finish: ["Glossy", "Matte", "Metallic"],
+};
+
+const STYLE_LABELS: Record<keyof MockupStyle, string> = {
+  shot:   "Shot",
+  mood:   "Mood",
+  finish: "Finish",
+};
+
+const DEFAULT_STYLE: MockupStyle = {
+  shot:   "Studio",
+  mood:   "Clean & Bright",
+  finish: "Glossy",
+};
+
+interface MockupAreaProps {
+  ideaId: string;
+  brandName: string;
+  ideaTitle: string;
+  ideaDescription: string;
+  strategyType: string;
+  mockupUrl: string | null;
+  savedStyle?: MockupStyle | null;
+  onMockupGenerated: (url: string, style: MockupStyle) => void;
+}
+
+export default function MockupArea({
+  ideaId,
+  brandName,
+  ideaTitle,
+  ideaDescription,
+  strategyType,
+  mockupUrl,
+  savedStyle,
+  onMockupGenerated,
+}: MockupAreaProps) {
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<MockupStep>("building");
+  const [error, setError] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [style, setStyle] = useState<MockupStyle>(savedStyle ?? DEFAULT_STYLE);
+
+  function toggleOption(key: keyof MockupStyle, value: string) {
+    setStyle((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function generateMockup() {
+    setLoading(true);
+    setError(null);
+    setStep("building");
+
+    try {
+      await delay(400);
+      setStep("calling");
+
+      const res = await fetch("/api/generate-mockup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ideaId,
+          brandName,
+          ideaTitle,
+          ideaDescription,
+          strategyType,
+          mockupStyle: style,
+        }),
+      });
+
+      setStep("saving");
+      await delay(300);
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      onMockupGenerated(data.mockupUrl, style);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to generate mockup";
+      setError(msg);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-[#F1F1F1] rounded-xl flex flex-col items-center justify-center gap-3 py-10">
+        <div className="w-8 h-8 border-2 border-[#0096D6] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-[#0096D6] font-medium animate-pulse">{stepLabels[step]}</p>
+        <div className="w-48 h-1.5 bg-[#E6F4FA] rounded-full overflow-hidden">
+          <div className="h-full bg-[#0096D6] rounded-full animate-progress" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+        <AlertTriangle size={20} className="text-red-500" />
+        <p className="text-xs text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  if (mockupUrl) {
+    return (
+      <>
+        <div className="relative group rounded-xl overflow-hidden h-52">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mockupUrl} alt={ideaTitle} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <button
+              onClick={() => setLightboxOpen(true)}
+              className="bg-white text-[#212121] text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-[#F1F1F1]"
+            >
+              <Maximize2 size={12} /> View
+            </button>
+          </div>
+        </div>
+        {lightboxOpen && (
+          <Lightbox src={mockupUrl} title={ideaTitle} onClose={() => setLightboxOpen(false)} />
+        )}
+      </>
+    );
+  }
+
+  // Empty state — show style survey + generate button
+  return (
+    <div className="bg-[#F1F1F1] rounded-xl border-2 border-dashed border-gray-300 px-4 pt-4 pb-4 flex flex-col gap-3">
+      {/* Header */}
+      <div className="flex items-center justify-center gap-1.5">
+        <Zap size={14} className="text-[#0096D6]" />
+        <span className="text-xs font-semibold text-[#0073A8]">Nano Banana 2</span>
+      </div>
+
+      {/* Style survey */}
+      <div className="space-y-2">
+        {(Object.keys(STYLE_OPTIONS) as (keyof MockupStyle)[]).map((key) => (
+          <div key={key} className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wide w-10 shrink-0">
+              {STYLE_LABELS[key]}
+            </span>
+            <div className="flex gap-1 flex-wrap">
+              {STYLE_OPTIONS[key].map((opt) => {
+                const active = style[key] === opt;
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => toggleOption(key, opt)}
+                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                      active
+                        ? "bg-[#0096D6] text-white border-[#0096D6]"
+                        : "bg-white text-[#6B7280] border-gray-300 hover:border-[#0096D6] hover:text-[#0096D6]"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Generate button */}
+      <button
+        onClick={generateMockup}
+        className="w-full bg-[#0096D6] text-white text-xs font-semibold py-2 rounded-lg hover:bg-[#0073A8] transition-colors"
+      >
+        Generate Mockup
+      </button>
+    </div>
+  );
+}
+
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
