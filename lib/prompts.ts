@@ -1,27 +1,25 @@
 import type { CampaignFormData } from "./types";
 
 const strategyDetails: Record<string, string> = {
-  VDP: "Variable Data Printing — each pack is unique, personalised with names, messages, or data",
-  QR: "QR-enabled packaging — scannable codes unlock digital experiences, competitions, or content",
-  Personalized: "Personalised limited edition — small-batch runs with location, season, or story-driven variants",
+  VDP: "Variable Data Printing — a generalised marketing campaign using multiple different artwork designs printed across the run (e.g. seasonal variants, limited-edition illustrations, region-specific artworks)",
+  QR: "QR Activation — packaging with a scannable QR code that drives customer engagement: competitions, feedback surveys, loyalty rewards, or exclusive digital content unlocks",
+  Personalized: "Personalised Packaging — each individual pack is unique, printed with a customer's own name, personal message, or custom data using HP Indigo's variable data capabilities",
 };
 
 export function buildConceptGenerationPrompt(form: CampaignFormData): string {
-  const isNutella = form.brandName.toLowerCase().includes("nutella");
+  const colorLine = form.brandColors.length === 1
+    ? `- Brand colour: ${form.brandColors[0]}`
+    : `- Brand colours: ${form.brandColors.join(", ")} (use these as the gradient palette)`;
 
-  const nutellaContext = isNutella
-    ? `\nBRAND CONTEXT: Nutella is made by Ferrero. Its iconic packaging is a cream jar with a bold red label. Ferrero has run city name and personal name limited edition jar campaigns. Christmas is their biggest gifting season. The jar is the canvas.`
-    : "";
-
-  return `Generate exactly 3 HP Indigo digital packaging campaign concepts for the following brand.${nutellaContext}
+  return `Generate exactly 3 HP Indigo digital packaging campaign concepts for the following brand.
 
 BRAND BRIEF:
 - Brand: ${form.brandName}
 - Product type: ${form.productType}
 - Campaign season: ${form.campaignSeason}
 - Target audience: ${form.targetAudience}
-- Brand personality: ${form.brandPersonality}
-- Primary brand colour: ${form.selectedColor}
+- Brand personality: ${form.brandPersonality || `${form.brandName} — an FMCG brand`}
+- ${colorLine}
 
 Return ONLY a valid JSON array of exactly 3 objects. No markdown. No explanation. Schema:
 [
@@ -76,6 +74,12 @@ export interface MockupStyle {
   finish: string;
 }
 
+const strategyVisualHints: Record<string, string> = {
+  VDP: "Show 3–4 packs side by side, each with a distinctly different artwork design or colour variant to emphasise the range of designs in the print run.",
+  QR: "Show a single pack with a clearly visible, well-designed QR code printed on the label. The QR code should look intentional and premium, integrated into the packaging design.",
+  Personalized: "Show 2–3 packs together where each pack has a different person's name or personalised message printed on the label, making the individuality obvious.",
+};
+
 export function buildMockupPrompt(
   brandName: string,
   ideaTitle: string,
@@ -86,5 +90,6 @@ export function buildMockupPrompt(
   const shot = style?.shot ?? "Studio";
   const mood = style?.mood ?? "Clean & Bright";
   const finish = style?.finish ?? "Glossy";
-  return `Photorealistic FMCG packaging mockup for "${brandName}". Concept: "${ideaTitle}". Strategy: ${strategyDetails[strategyType] ?? strategyDetails.VDP}. Shot: ${shot}. Mood: ${mood}. Finish: ${finish}. Brand name "${brandName}" clearly visible on pack. HP Indigo print quality.`;
+  const visualHint = strategyVisualHints[strategyType] ?? strategyVisualHints.VDP;
+  return `Photorealistic FMCG packaging mockup for "${brandName}". Concept: "${ideaTitle}". ${visualHint} Shot: ${shot}. Mood: ${mood}. Finish: ${finish}. Brand name "${brandName}" clearly visible on pack. HP Indigo print quality.`;
 }

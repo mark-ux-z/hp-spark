@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Zap, Maximize2, AlertTriangle } from "lucide-react";
+import { Zap, Maximize2, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import Lightbox from "./Lightbox";
 import type { MockupStyle } from "@/lib/supabase";
 
@@ -56,6 +56,7 @@ export default function MockupArea({
   const [step, setStep] = useState<MockupStep>("building");
   const [error, setError] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [style, setStyle] = useState<MockupStyle>(savedStyle ?? DEFAULT_STYLE);
 
   function toggleOption(key: keyof MockupStyle, value: string) {
@@ -122,20 +123,46 @@ export default function MockupArea({
   }
 
   if (mockupUrl) {
+    if (collapsed) {
+      return (
+        <div className="flex items-center justify-between gap-3 px-3 py-2 bg-[#F1F1F1] rounded-xl border border-gray-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mockupUrl} alt={ideaTitle} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+          <span className="text-xs text-[#6B7280] truncate flex-1">Mockup generated</span>
+          <button
+            onClick={() => setCollapsed(false)}
+            className="flex items-center gap-1 text-xs text-[#0096D6] font-medium shrink-0 hover:underline"
+          >
+            <ChevronDown size={13} /> Show
+          </button>
+        </div>
+      );
+    }
+
     return (
       <>
-        <div className="relative group rounded-xl overflow-hidden h-52">
+        {/* Image */}
+        <div className="relative rounded-t-xl overflow-hidden h-52">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={mockupUrl} alt={ideaTitle} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-            <button
-              onClick={() => setLightboxOpen(true)}
-              className="bg-white text-[#212121] text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-[#F1F1F1]"
-            >
-              <Maximize2 size={12} /> View
-            </button>
-          </div>
         </div>
+
+        {/* Controls bar — always visible below the image, never overlapping */}
+        <div className="flex items-center justify-between px-3 py-1.5 bg-[#F8F9FB] border-b border-gray-200">
+          <button
+            onClick={() => setLightboxOpen(true)}
+            className="flex items-center gap-1 text-[11px] text-[#6B7280] hover:text-[#212121] transition-colors"
+          >
+            <Maximize2 size={11} /> View full size
+          </button>
+          <button
+            onClick={() => setCollapsed(true)}
+            className="flex items-center gap-1 text-[11px] font-medium text-[#0096D6] hover:text-[#0073A8] transition-colors"
+          >
+            <ChevronUp size={11} /> Minimise
+          </button>
+        </div>
+
         {lightboxOpen && (
           <Lightbox src={mockupUrl} title={ideaTitle} onClose={() => setLightboxOpen(false)} />
         )}

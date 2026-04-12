@@ -7,10 +7,12 @@ interface ConceptCardProps {
   concept: Concept;
   index: number;
   season: string;
+  isActive?: boolean;
   onClick: () => void;
+  onSelectForChat?: (e: React.MouseEvent) => void;
 }
 
-export default function ConceptCard({ concept, index, season, onClick }: ConceptCardProps) {
+export default function ConceptCard({ concept, index, season, isActive, onClick, onSelectForChat }: ConceptCardProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const isTopPick = index === 0;
@@ -23,19 +25,20 @@ export default function ConceptCard({ concept, index, season, onClick }: Concept
       style={{
         background: "white",
         borderRadius: 14,
-        border: "1.5px solid var(--border)",
+        border: `1.5px solid ${isActive ? "var(--hp-blue)" : "var(--border)"}`,
         overflow: "hidden",
         cursor: "pointer",
         transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
+        boxShadow: isActive ? "0 4px 20px rgba(0,150,214,0.22)" : "none",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--hp-blue)";
+        if (!isActive) (e.currentTarget as HTMLDivElement).style.borderColor = "var(--hp-blue)";
         (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 20px rgba(0,150,214,0.18)";
         (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+        if (!isActive) (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = isActive ? "0 4px 20px rgba(0,150,214,0.22)" : "none";
         (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
       }}
     >
@@ -151,7 +154,7 @@ export default function ConceptCard({ concept, index, season, onClick }: Concept
           {concept.description.slice(0, 115)}{concept.description.length > 115 ? "…" : ""}
         </p>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <span
             style={{
               background: "#f0faf7",
@@ -161,13 +164,35 @@ export default function ConceptCard({ concept, index, season, onClick }: Concept
               padding: "4px 10px",
               borderRadius: 20,
               border: "1px solid rgba(0,168,120,0.2)",
+              flexShrink: 0,
             }}
           >
             {costLabel}
           </span>
-          <span style={{ fontSize: 13, color: "var(--hp-blue)", fontWeight: 500 }}>
-            See details →
-          </span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {onSelectForChat && (
+              <button
+                onClick={onSelectForChat}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: isActive ? "white" : "var(--hp-blue)",
+                  background: isActive ? "var(--hp-blue)" : "var(--light)",
+                  border: "1px solid rgba(0,150,214,0.3)",
+                  borderRadius: 6,
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isActive ? "✕ Close" : "Refine →"}
+              </button>
+            )}
+            <span style={{ fontSize: 13, color: "var(--hp-blue)", fontWeight: 500, whiteSpace: "nowrap" }}>
+              Details →
+            </span>
+          </div>
         </div>
       </div>
     </div>

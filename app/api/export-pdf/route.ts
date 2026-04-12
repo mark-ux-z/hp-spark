@@ -4,16 +4,16 @@ import React from "react";
 import { supabase } from "@/lib/supabase";
 import { CampaignPDF } from "@/lib/pdf-template";
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const campaignId = req.nextUrl.searchParams.get("campaignId");
+    const { campaignId, packagingSpecs, productionSpecs } = await req.json();
     if (!campaignId) {
       return NextResponse.json({ error: "campaignId is required" }, { status: 400 });
     }
 
     const [{ data: campaign, error: ce }, { data: ideas, error: ie }] = await Promise.all([
       supabase.from("campaigns").select("*").eq("id", campaignId).single(),
-      supabase.from("ideas").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: true }),
+      supabase.from("ideas").select("*").eq("campaign_id", campaignId).eq("idea_status", "approved").order("created_at", { ascending: true }),
     ]);
 
     if (ce || !campaign) {
@@ -21,7 +21,12 @@ export async function GET(req: NextRequest) {
     }
     if (ie) throw ie;
 
-    const element = React.createElement(CampaignPDF, { campaign, ideas: ideas ?? [] });
+    const element = React.createElement(CampaignPDF, {
+      campaign,
+      ideas: ideas ?? [],
+      packagingSpecs: packagingSpecs ?? {},
+      productionSpecs: productionSpecs ?? {},
+    });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
 

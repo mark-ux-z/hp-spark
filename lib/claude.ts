@@ -46,9 +46,9 @@ export async function generateIdeas(userPrompt: string, apiKey?: string): Promis
     headers: getHeaders(apiKey),
     body: JSON.stringify({
       model: "claude-haiku-4-5",
-      max_tokens: 600,
+      max_tokens: 1200,
       system:
-        "You are an HP Indigo digital printing strategist for FMCG brands. Respond ONLY with valid JSON, no markdown.",
+        "You are an HP Indigo digital printing strategist for FMCG brands. Respond ONLY with a valid JSON array, no markdown, no explanation, no text before or after.",
       messages: [{ role: "user", content: userPrompt }],
     }),
   });
@@ -59,9 +59,11 @@ export async function generateIdeas(userPrompt: string, apiKey?: string): Promis
   }
 
   const data = await res.json();
-  let text: string = data.content[0].text;
-  text = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-  return JSON.parse(text);
+  const raw: string = data.content[0].text;
+  // Extract only the JSON array — strips any preamble, code fences, or trailing text
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error(`Claude returned no JSON array. Raw: ${raw.slice(0, 200)}`);
+  return JSON.parse(match[0]);
 }
 
 export async function refineIdea(userPrompt: string, apiKey?: string): Promise<{
