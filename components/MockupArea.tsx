@@ -14,9 +14,9 @@ const stepLabels: Record<MockupStep, string> = {
 };
 
 const STYLE_OPTIONS: Record<keyof MockupStyle, string[]> = {
-  shot:   ["Studio", "Lifestyle", "Flat lay"],
-  mood:   ["Clean & Bright", "Soft & Natural", "Bold & Dramatic"],
-  finish: ["Glossy", "Matte", "Metallic"],
+  shot:   ["Studio", "Lifestyle", "Flat lay", "Commercial", "Editorial"],
+  mood:   ["Clean & Bright", "Soft & Natural", "Bold & Dramatic", "Dark & Moody", "Vintage / Retro"],
+  finish: ["Glossy", "Matte", "Metallic", "Soft-touch / Velvety", "Normal factory print"],
 };
 
 const STYLE_LABELS: Record<keyof MockupStyle, string> = {

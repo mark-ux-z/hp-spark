@@ -51,7 +51,7 @@ export default function TopBar({ activeTab, onTabChange }: TopBarProps) {
                 transition: "all 0.15s",
               }}
             >
-              {tab === "campaign" ? "New campaign" : "Library"}
+              {tab === "campaign" ? "Studio" : "Library"}
             </button>
           );
         })}
