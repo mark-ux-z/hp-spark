@@ -7,7 +7,7 @@ import {
   Image,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { Idea, Campaign } from "./supabase";
+import { Idea, Campaign, CampaignBudget } from "./supabase";
 import { ProductionSpec, DEFAULT_PRODUCTION_SPEC } from "./types";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -553,17 +553,43 @@ function TechSpecBlock({ idea, index, packagingSpec, productionSpec }: {
 
 // ─── Main document ────────────────────────────────────────────────────────────
 
-export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs }: {
+function budgetSummary(b: CampaignBudget | null | undefined): { range: string; runSize: string; cpu: string } | null {
+  if (!b) return null;
+  const bMin = parseFloat(b.budgetMin);
+  const bMax = parseFloat(b.budgetMax);
+  const run  = parseFloat(b.runSize);
+  const hasMin = !isNaN(bMin) && b.budgetMin;
+  const hasMax = !isNaN(bMax) && b.budgetMax;
+  const range = (hasMin && hasMax)
+    ? `EUR ${bMin.toLocaleString("en-GB")} - ${bMax.toLocaleString("en-GB")}`
+    : hasMin ? `From EUR ${bMin.toLocaleString("en-GB")}`
+    : hasMax ? `Up to EUR ${bMax.toLocaleString("en-GB")}`
+    : "";
+  const runLabel = (!isNaN(run) && b.runSize) ? `${run.toLocaleString("en-GB")} units` : "";
+  const cpuLo = (hasMin && !isNaN(run) && run > 0) ? bMin / run : null;
+  const cpuHi = (hasMax && !isNaN(run) && run > 0) ? bMax / run : null;
+  const cpu = (cpuLo !== null && cpuHi !== null)
+    ? `EUR ${cpuLo.toFixed(3)} - ${cpuHi.toFixed(3)} / unit`
+    : cpuLo !== null ? `EUR ${cpuLo.toFixed(3)} / unit`
+    : cpuHi !== null ? `EUR ${cpuHi.toFixed(3)} / unit`
+    : "";
+  if (!range && !runLabel) return null;
+  return { range, runSize: runLabel, cpu };
+}
+
+export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs, budget }: {
   campaign: Campaign;
   ideas: Idea[];
   packagingSpecs?: Record<string, PackagingSpec>;
   productionSpecs?: Record<string, ProductionSpec>;
+  budget?: CampaignBudget | null;
 }) {
   const date = new Date(campaign.created_at).toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric",
   });
 
   const strategyTypes = [...new Set(ideas.map((i) => STRATEGY_LABEL[i.strategy_type] ?? i.strategy_type))].join(", ");
+  const budgetInfo = budgetSummary(budget);
 
   return (
     <Document
@@ -592,6 +618,12 @@ export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs }
                 <Text style={s.coverMetaLabel}>STRATEGIES</Text>
                 <Text style={s.coverMetaValue}>{strategyTypes}</Text>
               </View>
+              {budgetInfo?.range ? (
+                <View style={s.coverMetaItem}>
+                  <Text style={s.coverMetaLabel}>BUDGET</Text>
+                  <Text style={s.coverMetaValue}>{budgetInfo.range}</Text>
+                </View>
+              ) : null}
               <View style={s.coverMetaItem}>
                 <Text style={s.coverMetaLabel}>GENERATED</Text>
                 <Text style={s.coverMetaValue}>{date}</Text>
@@ -667,6 +699,37 @@ export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs }
             productionSpec={productionSpecs?.[idea.id] ?? DEFAULT_PRODUCTION_SPEC}
           />
         ))}
+
+        {/* Budget overview block */}
+        {budgetInfo && (
+          <View style={{ marginHorizontal: 40, marginTop: 20, borderWidth: 1, borderColor: BORDER, borderRadius: 8, overflow: "hidden" }} wrap={false}>
+            <View style={{ backgroundColor: HP_MID, paddingHorizontal: 16, paddingVertical: 8 }}>
+              <Text style={{ color: WHITE, fontFamily: "Helvetica-Bold", fontSize: 9, letterSpacing: 0.5 }}>
+                PRODUCTION BUDGET OVERVIEW
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row" }}>
+              {budgetInfo.range ? (
+                <View style={{ flex: 1, padding: 14, borderRightWidth: 1, borderRightColor: BORDER }}>
+                  <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: MUTED, letterSpacing: 0.5, marginBottom: 4 }}>TOTAL BUDGET</Text>
+                  <Text style={{ fontSize: 12, fontFamily: "Helvetica-Bold", color: HP_DARK }}>{budgetInfo.range}</Text>
+                </View>
+              ) : null}
+              {budgetInfo.runSize ? (
+                <View style={{ flex: 1, padding: 14, borderRightWidth: budgetInfo.cpu ? 1 : 0, borderRightColor: BORDER }}>
+                  <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: MUTED, letterSpacing: 0.5, marginBottom: 4 }}>EXPECTED RUN SIZE</Text>
+                  <Text style={{ fontSize: 12, fontFamily: "Helvetica-Bold", color: HP_DARK }}>{budgetInfo.runSize}</Text>
+                </View>
+              ) : null}
+              {budgetInfo.cpu ? (
+                <View style={{ flex: 1, padding: 14 }}>
+                  <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: MUTED, letterSpacing: 0.5, marginBottom: 4 }}>EST. COST PER UNIT</Text>
+                  <Text style={{ fontSize: 12, fontFamily: "Helvetica-Bold", color: HP_BLUE }}>{budgetInfo.cpu}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        )}
 
         <Footer left={`HP Spark — Technical Print Specification  |  ${campaign.brand_name}`} />
       </Page>

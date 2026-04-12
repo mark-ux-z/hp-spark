@@ -7,7 +7,8 @@ import TopBar from "@/components/TopBar";
 import IdeaCard, { PackagingSpec } from "@/components/IdeaCard";
 import ChatSidebar from "@/components/ChatSidebar";
 import SpecPanel from "@/components/SpecPanel";
-import { supabase, Campaign, Idea, saveIdeaSpecs, getSettings, saveSettings } from "@/lib/supabase";
+import { supabase, Campaign, Idea, saveIdeaSpecs, getSettings, saveSettings, CampaignBudget } from "@/lib/supabase";
+import { getPartnersForCountries } from "@/lib/partners";
 import {
   CampaignStatus,
   CAMPAIGN_STATUS_CONFIG,
@@ -21,12 +22,6 @@ const COMPARISON_ROWS = [
   { label: "Min. order",       traditional: "10,000 units",  digital: "500 units" },
   { label: "Design variants",  traditional: "1 design",      digital: "Unlimited" },
   { label: "Estimated cost",   traditional: "€8,000+",       digital: "€1,800 – €3,200" },
-];
-
-const PARTNERS = [
-  { name: "Grafiche Garattoni", location: "Bologna, IT" },
-  { name: "Printcolor AG",      location: "Milan, IT" },
-  { name: "Indugraf",           location: "Barcelona, ES" },
 ];
 
 export default function CampaignPage() {
@@ -44,6 +39,8 @@ export default function CampaignPage() {
   const [productionSpecs, setProductionSpecs] = useState<Record<string, ProductionSpec>>({});
   const [selectedSpecIdea, setSelectedSpecIdea] = useState<Idea | null>(null);
   const [campaignStatus, setCampaignStatus] = useState<CampaignStatus>("ideation");
+  const [campaignCountries, setCampaignCountries] = useState<string[]>([]);
+  const [campaignBudget, setCampaignBudget] = useState<CampaignBudget | null>(null);
 
   const fetchData = useCallback(async () => {
     const [{ data: campaignData }, { data: ideasData }] = await Promise.all([
@@ -67,11 +64,13 @@ export default function CampaignPage() {
     setPackagingSpecs({ ...dbPkg, ...localPkg });
     setProductionSpecs({ ...dbProd, ...localProd });
 
-    // Load campaign status: prefer Supabase settings, fall back to localStorage
+    // Load campaign status + countries from Supabase settings with localStorage fallback
     const settings = await getSettings();
     const statusFromDB = settings.campaignStatuses?.[id] as CampaignStatus | undefined;
     const statusFromLocal = (JSON.parse(localStorage.getItem("campaign_statuses") ?? "{}") as Record<string, CampaignStatus>)[id];
     setCampaignStatus(statusFromDB ?? statusFromLocal ?? "ideation");
+    setCampaignCountries(settings.campaignCountries?.[id] ?? []);
+    setCampaignBudget(settings.campaignBudgets?.[id] ?? null);
 
     setLoading(false);
   }, [id]);
@@ -166,7 +165,7 @@ export default function CampaignPage() {
       const res = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId: campaign.id, packagingSpecs, productionSpecs }),
+        body: JSON.stringify({ campaignId: campaign.id, packagingSpecs, productionSpecs, budget: campaignBudget }),
       });
       if (!res.ok) throw new Error("PDF generation failed");
       const blob = await res.blob();
@@ -339,6 +338,52 @@ export default function CampaignPage() {
             </div>
           )}
 
+          {/* ── Budget overview ── */}
+          {campaignBudget && (campaignBudget.budgetMin || campaignBudget.budgetMax || campaignBudget.runSize) && (() => {
+            const { budgetMin, budgetMax, runSize } = campaignBudget;
+            const bMin = parseFloat(budgetMin);
+            const bMax = parseFloat(budgetMax);
+            const run  = parseFloat(runSize);
+            const cpuLo = (!isNaN(bMin) && !isNaN(run) && run > 0) ? (bMin / run) : null;
+            const cpuHi = (!isNaN(bMax) && !isNaN(run) && run > 0) ? (bMax / run) : null;
+            const budgetLabel = (budgetMin && budgetMax)
+              ? `€${Number(bMin).toLocaleString("en-GB")} – €${Number(bMax).toLocaleString("en-GB")}`
+              : budgetMin ? `From €${Number(bMin).toLocaleString("en-GB")}`
+              : budgetMax ? `Up to €${Number(bMax).toLocaleString("en-GB")}`
+              : "—";
+            const cpuLabel = (cpuLo !== null && cpuHi !== null)
+              ? `€${cpuLo.toFixed(3)} – €${cpuHi.toFixed(3)}`
+              : cpuLo !== null ? `€${cpuLo.toFixed(3)}`
+              : cpuHi !== null ? `€${cpuHi.toFixed(3)}`
+              : "—";
+            return (
+              <div style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>
+                  Production Budget Overview
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                  {[
+                    { label: "Total budget", value: budgetLabel, accent: false },
+                    { label: "Expected run size", value: runSize ? `${Number(run).toLocaleString("en-GB")} units` : "—", accent: false },
+                    { label: "Est. cost per unit", value: cpuLabel !== "—" ? cpuLabel : "—", accent: cpuLabel !== "—" },
+                  ].map((stat) => (
+                    <div key={stat.label} style={{
+                      background: "white", borderRadius: 10, border: `1px solid var(--border)`,
+                      padding: "16px 20px",
+                    }}>
+                      <p style={{ fontSize: 11, color: "var(--muted)", fontWeight: 500, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        {stat.label}
+                      </p>
+                      <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: stat.accent ? "var(--hp-blue)" : "var(--text)" }}>
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── HP Digital vs Traditional comparison ── */}
           <div style={{ marginBottom: 40 }}>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>
@@ -374,35 +419,67 @@ export default function CampaignPage() {
           </div>
 
           {/* ── HP Certified Print Partners ── */}
-          <div style={{ marginBottom: 40 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>
-              HP Certified Print Partners — Italy &amp; Spain
-            </p>
-            <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
-              {PARTNERS.map((p, i) => (
-                <div
-                  key={p.name}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "14px 20px",
-                    borderBottom: i < PARTNERS.length - 1 ? "1px solid var(--border)" : "none",
-                  }}
-                >
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text)", margin: 0 }}>{p.name}</p>
-                    <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>{p.location}</p>
+          {(() => {
+            const partners = getPartnersForCountries(campaignCountries);
+            const countryLabel = campaignCountries.length === 0
+              ? null
+              : campaignCountries.length <= 3
+              ? campaignCountries.join(" & ")
+              : `${campaignCountries.slice(0, 2).join(", ")} +${campaignCountries.length - 2} more`;
+            return (
+              <div style={{ marginBottom: 40 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>
+                  HP Certified Print Partners{countryLabel ? ` — ${countryLabel}` : ""}
+                </p>
+                {partners.length > 0 ? (
+                  <div style={{ background: "white", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
+                    {partners.map((p, i) => (
+                      <div
+                        key={`${p.name}-${i}`}
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "14px 20px",
+                          borderBottom: i < partners.length - 1 ? "1px solid var(--border)" : "none",
+                        }}
+                      >
+                        <div>
+                          <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text)", margin: 0 }}>{p.name}</p>
+                          <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>{p.city}, {p.code}</p>
+                        </div>
+                        <a
+                          href="#"
+                          onClick={(e) => e.preventDefault()}
+                          style={{ fontSize: 13, color: "var(--hp-blue)", textDecoration: "none", fontWeight: 500 }}
+                        >
+                          Contact →
+                        </a>
+                      </div>
+                    ))}
                   </div>
-                  <a
-                    href="#"
-                    onClick={(e) => e.preventDefault()}
-                    style={{ fontSize: 13, color: "var(--hp-blue)", textDecoration: "none", fontWeight: 500 }}
-                  >
-                    Contact →
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
+                ) : (
+                  <div style={{
+                    background: "white", borderRadius: 12, border: "1px solid var(--border)",
+                    padding: "28px 24px", textAlign: "center",
+                  }}>
+                    <p style={{ fontSize: 14, color: "var(--text)", fontWeight: 500, margin: "0 0 4px" }}>
+                      No countries set for this campaign
+                    </p>
+                    <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 16px" }}>
+                      Add countries of operation when creating a campaign to see matched HP Indigo print partners.
+                    </p>
+                    <a
+                      href="https://www.hp.com/us-en/printers/indigo-presses/find-a-printer.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontSize: 13, color: "var(--hp-blue)", fontWeight: 500, textDecoration: "none" }}
+                    >
+                      Find an HP partner globally →
+                    </a>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
         </div>
 

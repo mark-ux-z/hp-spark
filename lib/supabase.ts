@@ -127,16 +127,26 @@ export type SpecPreset = {
   spec: ProductionSpec;
 };
 
+export type CampaignBudget = {
+  budgetMin: string;
+  budgetMax: string;
+  runSize: string;
+};
+
 export type UserSettings = {
   campaignNames: Record<string, string>;
   campaignStatuses: Record<string, string>;
   specPresets: SpecPreset[];
+  campaignCountries: Record<string, string[]>;
+  campaignBudgets: Record<string, CampaignBudget>;
 };
 
 const EMPTY_SETTINGS: UserSettings = {
   campaignNames: {},
   campaignStatuses: {},
   specPresets: [],
+  campaignCountries: {},
+  campaignBudgets: {},
 };
 
 let settingsCache: { id: string | null; data: UserSettings } | null = null;

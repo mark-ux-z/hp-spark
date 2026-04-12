@@ -7,7 +7,27 @@ import LoginPage from "@/components/LoginPage";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import LibraryView from "@/components/LibraryView";
 import { getSettings, saveSettings } from "@/lib/supabase";
+import { EUROPEAN_COUNTRIES } from "@/lib/partners";
 import type { NavTab } from "@/lib/types";
+
+function formatEuro(val: string): string {
+  const n = parseFloat(val);
+  if (!val || isNaN(n)) return "";
+  return `€${n.toLocaleString("en-GB")}`;
+}
+
+function calcCostPerUnit(min: string, max: string, run: string): string | null {
+  const bMin = parseFloat(min);
+  const bMax = parseFloat(max);
+  const r    = parseFloat(run);
+  if (!r || r <= 0 || (isNaN(bMin) && isNaN(bMax))) return null;
+  const lo = !isNaN(bMin) ? bMin / r : null;
+  const hi = !isNaN(bMax) ? bMax / r : null;
+  if (lo !== null && hi !== null) return `€${lo.toFixed(3)} – €${hi.toFixed(3)} per unit`;
+  if (lo !== null) return `€${lo.toFixed(3)} per unit`;
+  if (hi !== null) return `€${hi.toFixed(3)} per unit`;
+  return null;
+}
 
 const SEASONS = ["Christmas / Winter", "Summer", "Easter / Spring", "Always-on"];
 const AUDIENCES = ["Millennials 25–40", "Families with children", "Gen Z 18–25", "Premium / gifting"];
@@ -66,6 +86,12 @@ function HomeInner() {
   const [brandPersonality, setBrandPersonality] = useState("");
   const [brandColors, setBrandColors] = useState<string[]>(["#0096D6"]);
   const [pickerValue, setPickerValue] = useState("#0096D6");
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const [budgetMin, setBudgetMin] = useState("");
+  const [budgetMax, setBudgetMax] = useState("");
+  const [runSize, setRunSize] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +99,23 @@ function HomeInner() {
   // Loading
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(1);
+
+  // Close country dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(e.target as Node)) {
+        setCountryDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function toggleCountry(country: string) {
+    setSelectedCountries((prev) =>
+      prev.includes(country) ? prev.filter((c) => c !== country) : [...prev, country]
+    );
+  }
 
   function handleFiles(newFiles: FileList | null) {
     if (!newFiles) return;
@@ -113,15 +156,19 @@ function HomeInner() {
       setLoadingStep(3);
       await new Promise((r) => setTimeout(r, 400));
 
-      // Save campaign name to localStorage + Supabase settings
-      if (campaignName.trim()) {
+      // Save campaign name, countries, and budget to localStorage + Supabase settings
+      {
         const names = JSON.parse(localStorage.getItem("campaign_names") ?? "{}");
-        names[data.campaignId!] = campaignName.trim();
+        if (campaignName.trim()) names[data.campaignId!] = campaignName.trim();
         localStorage.setItem("campaign_names", JSON.stringify(names));
         // Persist to Supabase (fire and forget)
         getSettings().then((settings) => {
-          const updatedNames = { ...(settings.campaignNames ?? {}), [data.campaignId!]: campaignName.trim() };
-          return saveSettings({ campaignNames: updatedNames });
+          const hasBudget = budgetMin || budgetMax || runSize;
+          return saveSettings({
+            ...(campaignName.trim() ? { campaignNames: { ...(settings.campaignNames ?? {}), [data.campaignId!]: campaignName.trim() } } : {}),
+            ...(selectedCountries.length > 0 ? { campaignCountries: { ...(settings.campaignCountries ?? {}), [data.campaignId!]: selectedCountries } } : {}),
+            ...(hasBudget ? { campaignBudgets: { ...(settings.campaignBudgets ?? {}), [data.campaignId!]: { budgetMin, budgetMax, runSize } } } : {}),
+          });
         }).catch(console.error);
       }
 
@@ -223,6 +270,166 @@ function HomeInner() {
                   placeholder="Describe your brand's tone, values, and what makes it unique — e.g. playful and bold, heritage British brand, known for vibrant limited editions…"
                   style={{ ...selectStyle, backgroundImage: "none", paddingRight: 12, resize: "vertical", lineHeight: 1.6 }}
                 />
+              </div>
+
+              {/* Country of operation — multi-select dropdown */}
+              <div style={{ marginBottom: 20 }} ref={countryDropdownRef}>
+                <label style={labelStyle}>
+                  Countries of operation
+                  <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>optional — used to match print partners</span>
+                </label>
+                <div style={{ position: "relative" }}>
+                  <button
+                    type="button"
+                    onClick={() => setCountryDropdownOpen((o) => !o)}
+                    style={{
+                      ...selectStyle,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      color: selectedCountries.length > 0 ? "var(--text)" : "var(--muted)",
+                      background: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, paddingRight: 8 }}>
+                      {selectedCountries.length === 0
+                        ? "Select countries…"
+                        : selectedCountries.length === 1
+                        ? selectedCountries[0]
+                        : `${selectedCountries[0]} +${selectedCountries.length - 1} more`}
+                    </span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C6B82" strokeWidth="2">
+                      <polyline points={countryDropdownOpen ? "18 15 12 9 6 15" : "6 9 12 15 18 9"} />
+                    </svg>
+                  </button>
+
+                  {countryDropdownOpen && (
+                    <div style={{
+                      position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+                      background: "white", border: "1px solid var(--border)", borderRadius: 8,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                      zIndex: 50, maxHeight: 280, overflowY: "auto",
+                    }}>
+                      {EUROPEAN_COUNTRIES.map((country) => {
+                        const checked = selectedCountries.includes(country);
+                        return (
+                          <label
+                            key={country}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 10,
+                              padding: "9px 14px", cursor: "pointer",
+                              background: checked ? "var(--light)" : "white",
+                              transition: "background 0.1s",
+                            }}
+                            onMouseEnter={(e) => { if (!checked) (e.currentTarget as HTMLLabelElement).style.background = "#f9fafb"; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLLabelElement).style.background = checked ? "var(--light)" : "white"; }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCountry(country)}
+                              style={{ accentColor: "var(--hp-blue)", width: 14, height: 14, cursor: "pointer", flexShrink: 0 }}
+                            />
+                            <span style={{ fontSize: 14, color: "var(--text)" }}>{country}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected country chips */}
+                {selectedCountries.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                    {selectedCountries.map((country) => (
+                      <span
+                        key={country}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          background: "var(--light)", border: "1px solid rgba(0,150,214,0.25)",
+                          borderRadius: 20, padding: "3px 10px", fontSize: 12, color: "var(--hp-blue)",
+                        }}
+                      >
+                        {country}
+                        <button
+                          type="button"
+                          onClick={() => toggleCountry(country)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hp-blue)", padding: 0, lineHeight: 1, fontSize: 14 }}
+                        >×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Production cost range */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>
+                  Production cost range
+                  <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>optional</span>
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                  {/* Budget min */}
+                  <div>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Budget min (€)</p>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--muted)", pointerEvents: "none" }}>€</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={budgetMin}
+                        onChange={(e) => setBudgetMin(e.target.value)}
+                        placeholder="e.g. 2000"
+                        style={{ ...selectStyle, backgroundImage: "none", paddingLeft: 24, paddingRight: 12 }}
+                      />
+                    </div>
+                  </div>
+                  {/* Budget max */}
+                  <div>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Budget max (€)</p>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--muted)", pointerEvents: "none" }}>€</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={budgetMax}
+                        onChange={(e) => setBudgetMax(e.target.value)}
+                        placeholder="e.g. 5000"
+                        style={{ ...selectStyle, backgroundImage: "none", paddingLeft: 24, paddingRight: 12 }}
+                      />
+                    </div>
+                  </div>
+                  {/* Run size */}
+                  <div>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Expected run size (units)</p>
+                    <input
+                      type="number"
+                      min="1"
+                      step="500"
+                      value={runSize}
+                      onChange={(e) => setRunSize(e.target.value)}
+                      placeholder="e.g. 5000"
+                      style={{ ...selectStyle, backgroundImage: "none", paddingRight: 12 }}
+                    />
+                  </div>
+                </div>
+                {/* Live cost per unit estimate */}
+                {calcCostPerUnit(budgetMin, budgetMax, runSize) && (
+                  <div style={{
+                    marginTop: 8, padding: "8px 12px",
+                    background: "var(--light)", borderRadius: 6,
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Est. cost per unit:</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--hp-blue)" }}>
+                      {calcCostPerUnit(budgetMin, budgetMax, runSize)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Colour picker — visible input + Add button */}
