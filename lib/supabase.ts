@@ -131,12 +131,14 @@ export type UserSettings = {
   campaignNames: Record<string, string>;
   campaignStatuses: Record<string, string>;
   specPresets: SpecPreset[];
+  campaignCountries: Record<string, string[]>;
 };
 
 const EMPTY_SETTINGS: UserSettings = {
   campaignNames: {},
   campaignStatuses: {},
   specPresets: [],
+  campaignCountries: {},
 };
 
 let settingsCache: { id: string | null; data: UserSettings } | null = null;
