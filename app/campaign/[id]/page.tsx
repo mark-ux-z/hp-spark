@@ -212,31 +212,30 @@ export default function CampaignPage() {
       <TopBar activeTab="campaign" onTabChange={(tab) => router.push(`/?tab=${tab}`)} />
 
       {/* HP Gradient Hero Header */}
-      <div style={{ background: "linear-gradient(135deg, #002D72 0%, #005B99 55%, #0096D6 100%)", padding: "36px 40px 44px", flexShrink: 0 }}>
+      <div style={{ background: "linear-gradient(135deg, #002D72 0%, #005B99 55%, #0096D6 100%)", padding: "20px 40px 24px", flexShrink: 0 }}>
         {/* Breadcrumb */}
         <button
           onClick={() => router.push("/?tab=library")}
           style={{
             display: "flex", alignItems: "center", gap: 4,
             background: "none", border: "none", cursor: "pointer",
-            color: "rgba(255,255,255,0.6)", fontSize: 13, marginBottom: 16, padding: 0,
+            color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 10, padding: 0,
           }}
         >
-          <ChevronLeft size={14} />
+          <ChevronLeft size={13} />
           Library
         </button>
 
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <p style={{ fontSize: 11, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 8 }}>
-              HP CAMPAIGN STUDIO
-            </p>
-            <h1 className="font-serif" style={{ fontSize: 36, color: "white", lineHeight: 1.15, margin: 0, marginBottom: 6 }}>
-              {campaign.brand_name}
-            </h1>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", margin: "0 0 20px" }}>
-              {ideas.length} campaign concept{ideas.length !== 1 ? "s" : ""} · HP Indigo digital packaging
-            </p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4 }}>
+              <h1 className="font-serif" style={{ fontSize: 26, color: "white", lineHeight: 1.2, margin: 0 }}>
+                {campaign.brand_name}
+              </h1>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", margin: 0 }}>
+                {ideas.length} concept{ideas.length !== 1 ? "s" : ""} · HP Indigo
+              </p>
+            </div>
 
             {/* Campaign status stepper */}
             <div style={{ display: "flex", alignItems: "center" }}>
