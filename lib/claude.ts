@@ -1,8 +1,8 @@
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
-function getHeaders() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY is not set in .env.local");
+function getHeaders(apiKey?: string) {
+  const key = apiKey || process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("ANTHROPIC_API_KEY is not set");
   return {
     "Content-Type": "application/json",
     "x-api-key": key,
@@ -10,17 +10,18 @@ function getHeaders() {
   };
 }
 
-export async function generateIdeas(userPrompt: string): Promise<
-  { title: string; description: string; strategy_type: string }[]
-> {
+export async function generateConcepts(
+  userPrompt: string,
+  apiKey?: string
+): Promise<object[]> {
   const res = await fetch(CLAUDE_API_URL, {
     method: "POST",
-    headers: getHeaders(),
+    headers: getHeaders(apiKey),
     body: JSON.stringify({
       model: "claude-haiku-4-5",
-      max_tokens: 600,
+      max_tokens: 2000,
       system:
-        "You are an HP Indigo digital printing strategist for FMCG brands. Respond ONLY with valid JSON, no markdown.",
+        "You are an HP Indigo digital printing strategist for FMCG brands. Respond ONLY with a valid JSON array, no markdown, no explanation.",
       messages: [{ role: "user", content: userPrompt }],
     }),
   });
@@ -36,14 +37,43 @@ export async function generateIdeas(userPrompt: string): Promise<
   return JSON.parse(text);
 }
 
-export async function refineIdea(userPrompt: string): Promise<{
+// Keep existing functions for campaign/[id] refinement flow
+export async function generateIdeas(userPrompt: string, apiKey?: string): Promise<
+  { title: string; description: string; strategy_type: string }[]
+> {
+  const res = await fetch(CLAUDE_API_URL, {
+    method: "POST",
+    headers: getHeaders(apiKey),
+    body: JSON.stringify({
+      model: "claude-haiku-4-5",
+      max_tokens: 1200,
+      system:
+        "You are an HP Indigo digital printing strategist for FMCG brands. Respond ONLY with a valid JSON array, no markdown, no explanation, no text before or after.",
+      messages: [{ role: "user", content: userPrompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Claude API error: ${res.status} — ${err}`);
+  }
+
+  const data = await res.json();
+  const raw: string = data.content[0].text;
+  // Extract only the JSON array — strips any preamble, code fences, or trailing text
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error(`Claude returned no JSON array. Raw: ${raw.slice(0, 200)}`);
+  return JSON.parse(match[0]);
+}
+
+export async function refineIdea(userPrompt: string, apiKey?: string): Promise<{
   title: string;
   description: string;
   strategy_type: string;
 }> {
   const res = await fetch(CLAUDE_API_URL, {
     method: "POST",
-    headers: getHeaders(),
+    headers: getHeaders(apiKey),
     body: JSON.stringify({
       model: "claude-haiku-4-5",
       max_tokens: 400,

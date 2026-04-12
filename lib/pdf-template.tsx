@@ -6,19 +6,23 @@ import {
   View,
   Image,
   StyleSheet,
-  Font,
 } from "@react-pdf/renderer";
 import { Idea, Campaign } from "./supabase";
+import { ProductionSpec, DEFAULT_PRODUCTION_SPEC } from "./types";
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Palette ──────────────────────────────────────────────────────────────────
 
-const HP_BLUE = "#0096D6";
-const HP_BLUE_DARK = "#0073A8";
-const COOL_GREY = "#F1F1F1";
-const DARK_SLATE = "#212121";
-const MUTED = "#6B7280";
-const WHITE = "#FFFFFF";
-const BORDER = "#E5E7EB";
+const HP_BLUE      = "#0096D6";
+const HP_DARK      = "#002D72";
+const HP_MID       = "#0073A8";
+const COOL_GREY    = "#F4F6F8";
+const BORDER       = "#E2E8F0";
+const DARK_SLATE   = "#1A202C";
+const MUTED        = "#718096";
+const WHITE        = "#FFFFFF";
+const SUCCESS      = "#065F46";
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   page: {
@@ -26,85 +30,113 @@ const s = StyleSheet.create({
     fontSize: 10,
     color: DARK_SLATE,
     backgroundColor: WHITE,
-    paddingTop: 0,
-    paddingBottom: 40,
+    paddingBottom: 48,
   },
 
-  // ── Cover band ──
-  coverBand: {
-    backgroundColor: HP_BLUE,
+  // ── Top bar (fixed on every page) ──
+  topBar: {
+    backgroundColor: HP_DARK,
     paddingHorizontal: 40,
-    paddingVertical: 28,
+    paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  coverLogo: {
-    width: 36,
-    height: 36,
+  topBarLeft: { flexDirection: "row", alignItems: "center" },
+  topBarLogo: {
+    width: 28, height: 28,
     backgroundColor: WHITE,
-    borderRadius: 6,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 10,
   },
-  coverLogoText: {
-    color: HP_BLUE,
-    fontFamily: "Helvetica-Bold",
-    fontSize: 14,
+  topBarLogoText: { color: HP_DARK, fontFamily: "Helvetica-Bold", fontSize: 11 },
+  topBarTitle: { color: WHITE, fontFamily: "Helvetica-Bold", fontSize: 11 },
+  topBarSub:   { color: "#93C5FD", fontSize: 8, marginTop: 1 },
+  topBarDate:  { color: "#93C5FD", fontSize: 8 },
+
+  // ── Footer (fixed) ──
+  footer: {
+    position: "absolute",
+    bottom: 16,
+    left: 40,
+    right: 40,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    paddingTop: 6,
   },
-  coverBrandGroup: { flexDirection: "row", alignItems: "center", gap: 10 },
-  coverTitle: {
+  footerText: { fontSize: 7, color: MUTED },
+
+  // ── Cover page ──
+  coverPage: {
+    backgroundColor: HP_DARK,
+    flex: 1,
+    paddingHorizontal: 56,
+    paddingVertical: 64,
+    justifyContent: "space-between",
+  },
+  coverLogoBox: {
+    width: 52, height: 52,
+    backgroundColor: WHITE,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 48,
+  },
+  coverLogoText:  { color: HP_DARK, fontFamily: "Helvetica-Bold", fontSize: 22 },
+  coverLabel:     { color: "#93C5FD", fontSize: 10, letterSpacing: 2, marginBottom: 12 },
+  coverBrandName: { color: WHITE, fontFamily: "Helvetica-Bold", fontSize: 44, lineHeight: 1.1, marginBottom: 8 },
+  coverSubtitle:  { color: "#BAE6FD", fontSize: 14, marginBottom: 40 },
+  coverDivider:   { height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginBottom: 28 },
+  coverMeta:      { flexDirection: "row" },
+  coverMetaItem:  { marginRight: 40 },
+  coverMetaLabel: { color: "#93C5FD", fontSize: 8, letterSpacing: 1, marginBottom: 4 },
+  coverMetaValue: { color: WHITE, fontFamily: "Helvetica-Bold", fontSize: 11 },
+  coverFooter:    { color: "rgba(255,255,255,0.35)", fontSize: 8 },
+
+  // ── Section divider ──
+  sectionBar: {
+    backgroundColor: HP_MID,
+    paddingHorizontal: 40,
+    paddingVertical: 7,
+    marginBottom: 4,
+  },
+  sectionBarText: {
     color: WHITE,
     fontFamily: "Helvetica-Bold",
-    fontSize: 13,
+    fontSize: 8,
+    letterSpacing: 1,
   },
-  coverSub: { color: "#C9E9F7", fontSize: 9 },
-  coverDate: { color: "#C9E9F7", fontSize: 8 },
 
   // ── Campaign hero ──
   hero: {
     backgroundColor: COOL_GREY,
     paddingHorizontal: 40,
     paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomWidth: 2,
+    borderBottomColor: HP_BLUE,
+    marginBottom: 4,
   },
-  heroLabel: { fontSize: 8, color: MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 },
-  heroBrand: { fontFamily: "Helvetica-Bold", fontSize: 22, color: DARK_SLATE },
-  heroContext: { fontSize: 10, color: MUTED, marginTop: 4 },
+  heroLabel:   { fontSize: 8, color: MUTED, letterSpacing: 1, marginBottom: 4 },
+  heroBrand:   { fontFamily: "Helvetica-Bold", fontSize: 26, color: HP_DARK, marginBottom: 4 },
+  heroContext: { fontSize: 9, color: MUTED, lineHeight: 1.5, marginBottom: 12 },
   heroBadge: {
-    marginTop: 10,
-    flexDirection: "row",
-    gap: 6,
-  },
-  badge: {
-    backgroundColor: HP_BLUE,
+    backgroundColor: SUCCESS,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 3,
     alignSelf: "flex-start",
   },
-  badgeText: { color: WHITE, fontSize: 8, fontFamily: "Helvetica-Bold" },
-
-  // ── Section header ──
-  sectionHeader: {
-    backgroundColor: HP_BLUE_DARK,
-    paddingHorizontal: 40,
-    paddingVertical: 8,
-    marginBottom: 0,
-  },
-  sectionHeaderText: {
-    color: WHITE,
-    fontFamily: "Helvetica-Bold",
-    fontSize: 9,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
+  heroBadgeText: { color: WHITE, fontSize: 8, fontFamily: "Helvetica-Bold" },
 
   // ── Idea card ──
   ideaWrapper: {
     marginHorizontal: 40,
-    marginTop: 20,
+    marginTop: 16,
     borderWidth: 1,
     borderColor: BORDER,
     borderRadius: 8,
@@ -120,146 +152,237 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
-  ideaStrategyPill: {
+  ideaHeaderLeft: { flexDirection: "row", alignItems: "center" },
+  ideaNum:     { fontFamily: "Helvetica-Bold", fontSize: 8, color: MUTED, marginRight: 8 },
+  strategyPill: {
     borderRadius: 20,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  ideaStrategyText: { fontSize: 8, fontFamily: "Helvetica-Bold" },
+  strategyPillText: { fontSize: 8, fontFamily: "Helvetica-Bold" },
   ideaRevisions: { fontSize: 8, color: MUTED },
   ideaBody: { padding: 16 },
-  ideaTitle: { fontFamily: "Helvetica-Bold", fontSize: 13, marginBottom: 6, color: DARK_SLATE },
-  ideaDesc: { fontSize: 10, color: MUTED, lineHeight: 1.5 },
+  ideaTitle: { fontFamily: "Helvetica-Bold", fontSize: 14, color: DARK_SLATE, marginBottom: 6 },
+  ideaDesc:  { fontSize: 10, color: MUTED, lineHeight: 1.55 },
 
   // ── Mockup ──
   mockupWrapper: {
-    marginTop: 12,
+    marginTop: 14,
     borderRadius: 6,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: BORDER,
-    alignItems: "center",
   },
-  mockupImage: { width: "100%", maxHeight: 220, objectFit: "contain" },
-  mockupCaption: { fontSize: 7, color: MUTED, textAlign: "center", paddingVertical: 4 },
+  mockupImage: {
+    width: "100%",
+    height: 210,
+    objectFit: "cover",
+    objectPosition: "center",
+  },
+  mockupCaption: { fontSize: 7, color: MUTED, textAlign: "center", paddingVertical: 5, backgroundColor: COOL_GREY },
 
-  // ── Feedback history ──
-  historySection: {
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
+  // ── Exec context bar (shows idea identity at top of execution section) ──
+  execContextBar: {
+    backgroundColor: COOL_GREY,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: HP_BLUE,
   },
-  historyLabel: { fontSize: 8, fontFamily: "Helvetica-Bold", color: MUTED, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 },
-  historyItem: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 4,
-  },
-  historyDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: HP_BLUE, marginTop: 3 },
-  historyText: { fontSize: 9, color: DARK_SLATE, flex: 1 },
-  historyDate: { fontSize: 7, color: MUTED },
+  execContextText: { fontSize: 8, fontFamily: "Helvetica-Bold", color: MUTED },
+
+  // ── Revision history ──
+  historySection: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: BORDER },
+  historyLabel:   { fontSize: 8, fontFamily: "Helvetica-Bold", color: MUTED, letterSpacing: 0.5, marginBottom: 8 },
+  historyRow:     { flexDirection: "row", alignItems: "flex-start", marginBottom: 5 },
+  historyDot:     { width: 4, height: 4, borderRadius: 2, backgroundColor: HP_BLUE, marginTop: 3, marginRight: 8 },
+  historyText:    { fontSize: 9, color: DARK_SLATE, flex: 1 },
+  historyDate:    { fontSize: 7, color: MUTED },
 
   // ── Execution guide ──
-  execSection: {
-    marginTop: 14,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: HP_BLUE,
-  },
-  execTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, color: HP_BLUE, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
-  execStep: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 6,
-  },
-  execStepNum: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  execSection: { marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: HP_BLUE },
+  execTitle:   { fontFamily: "Helvetica-Bold", fontSize: 9, color: HP_BLUE, letterSpacing: 0.5, marginBottom: 10 },
+  execRow:     { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },
+  execNumBox:  {
+    width: 18, height: 18,
+    borderRadius: 9,
     backgroundColor: HP_BLUE,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 10,
   },
-  execStepNumText: { color: WHITE, fontSize: 7, fontFamily: "Helvetica-Bold" },
+  execNumText:  { color: WHITE, fontSize: 7, fontFamily: "Helvetica-Bold" },
   execStepBody: { flex: 1 },
   execStepTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, color: DARK_SLATE, marginBottom: 2 },
-  execStepDesc: { fontSize: 8, color: MUTED, lineHeight: 1.5 },
+  execStepDesc:  { fontSize: 8, color: MUTED, lineHeight: 1.5 },
 
-  // ── Footer ──
-  footer: {
-    position: "absolute",
-    bottom: 16,
-    left: 40,
-    right: 40,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: 8,
+  // ── Packaging spec table ──
+  specTableHeader: { backgroundColor: HP_BLUE, paddingHorizontal: 12, paddingVertical: 6 },
+  specTableHeaderText: { color: WHITE, fontFamily: "Helvetica-Bold", fontSize: 8, letterSpacing: 0.5 },
+  specRow: { flexDirection: "row" },
+  specRowLabel: {
+    width: "35%",
+    backgroundColor: COOL_GREY,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRightWidth: 1,
+    borderRightColor: BORDER,
   },
-  footerLeft: { fontSize: 7, color: MUTED },
-  footerRight: { fontSize: 7, color: MUTED },
+  specRowLabelText: { fontSize: 8, fontFamily: "Helvetica-Bold", color: MUTED },
+  specRowValue: { width: "65%", paddingHorizontal: 10, paddingVertical: 5 },
+  specRowValueText: { fontSize: 8, color: DARK_SLATE },
+
+  // ── Two-col table (tech spec page) ──
+  tcLabel: {
+    width: "38%",
+    backgroundColor: COOL_GREY,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRightWidth: 1,
+    borderRightColor: BORDER,
+  },
+  tcValue: { width: "62%", paddingHorizontal: 10, paddingVertical: 5 },
+  tcLabelText: { fontSize: 8, fontFamily: "Helvetica-Bold", color: MUTED },
+  tcValueText: { fontSize: 8, color: DARK_SLATE },
 });
 
-// ─── Execution instructions per strategy ─────────────────────────────────────
+// ─── Strategy colours ─────────────────────────────────────────────────────────
 
-type Step = { title: string; desc: string };
+const STRATEGY_COLOUR: Record<string, { bg: string; text: string }> = {
+  VDP:          { bg: "#DBEAFE", text: "#1D4ED8" },
+  QR:           { bg: "#DCFCE7", text: "#166534" },
+  Personalized: { bg: "#FEF3C7", text: "#92400E" },
+};
 
-const execSteps: Record<string, Step[]> = {
+const STRATEGY_LABEL: Record<string, string> = {
+  VDP:          "Variable Data",
+  QR:           "QR Integration",
+  Personalized: "Personalised",
+};
+
+// ─── Execution steps ──────────────────────────────────────────────────────────
+
+const EXEC_STEPS: Record<string, { title: string; desc: string }[]> = {
   VDP: [
-    { title: "Prepare your data file", desc: "Export your customer/region database as a CSV with columns for each variable field (name, location, offer code, etc.). Clean for duplicates and special characters." },
-    { title: "Build the variable template", desc: "In your design tool (InDesign / HP SmartStream), create the base layout. Define variable text and image frames — link each frame to the corresponding CSV column." },
-    { title: "Preflight the variable set", desc: "Run a preflight check across the full data set. Verify fonts are embedded, image resolution ≥ 300 dpi, and all variables resolve without overflow." },
-    { title: "Submit to HP Indigo press", desc: "Export a VDP-ready PDF/VT job package. Send to your HP Indigo operator with the data file, confirming substrate, ink profile, and quantity per variant." },
-    { title: "Quality control pull", desc: "Request a printed proof of at least 3 representative variants before the full run. Sign off on colour accuracy and variable field placement." },
-    { title: "Fulfilment & tracking", desc: "Use the unique identifiers in the data set to route each personalised piece to the correct recipient. Track scan/open rates to measure campaign effectiveness." },
+    { title: "Prepare your data file",     desc: "Export your customer/region database as a CSV with columns for each variable field (name, location, offer code). Clean for duplicates and special characters." },
+    { title: "Build the variable template", desc: "In InDesign or HP SmartStream, create the base layout. Define variable text and image frames — link each frame to the corresponding CSV column." },
+    { title: "Preflight the variable set",  desc: "Run a preflight check across the full data set. Verify fonts are embedded, image resolution is 300 dpi minimum, and all variables resolve without overflow." },
+    { title: "Submit to HP Indigo press",   desc: "Export a VDP-ready PDF/VT job package. Send to your HP Indigo operator with the data file, confirming substrate, ink profile, and quantity per variant." },
+    { title: "Quality control pull",        desc: "Request a printed proof of at least 3 representative variants before the full run. Sign off on colour accuracy and variable field placement." },
+    { title: "Fulfilment and tracking",     desc: "Use the unique identifiers in the data set to route each personalised piece to the correct recipient. Track scan/open rates to measure campaign effectiveness." },
   ],
   QR: [
-    { title: "Define QR destinations", desc: "For each print piece, determine the landing URL (personalised page, video, product page). Use a QR management platform (e.g. Flowcode, Bitly) to generate trackable short URLs." },
-    { title: "Generate & test QR codes", desc: "Export QR codes at minimum 2 cm × 2 cm. Test scan on iOS and Android in both bright and low-light conditions before embedding in artwork." },
-    { title: "Integrate QR into artwork", desc: "Place the QR code with a clear quiet zone (white border ≥ 4 modules). Add a short CTA beneath: 'Scan to claim your offer'. Ensure sufficient contrast with background." },
-    { title: "Preflight for print", desc: "Flatten QR layer, verify vector-clean edges, and ensure artwork is submitted as press-ready PDF/X-4 with embedded colour profiles." },
-    { title: "Print on HP Indigo", desc: "HP Indigo's 7-colour ink set renders QR codes with sharp edges essential for reliable scanning. Confirm gloss coating does not reduce contrast below scanner threshold." },
-    { title: "Monitor scan analytics", desc: "Track scan volume, time, and location via your QR dashboard. Use this data to optimise the landing experience and inform future print runs." },
+    { title: "Define QR destinations",     desc: "For each print piece, determine the landing URL. Use a QR management platform (e.g. Flowcode, Bitly) to generate trackable short URLs." },
+    { title: "Generate and test QR codes", desc: "Export QR codes at minimum 2 cm x 2 cm. Test scan on iOS and Android in both bright and low-light conditions before embedding in artwork." },
+    { title: "Integrate QR into artwork",  desc: "Place the QR code with a clear quiet zone (white border 4 modules minimum). Add a short call-to-action beneath. Ensure sufficient contrast with background." },
+    { title: "Preflight for print",        desc: "Flatten QR layer, verify vector-clean edges, and ensure artwork is submitted as press-ready PDF/X-4 with embedded colour profiles." },
+    { title: "Print on HP Indigo",         desc: "HP Indigo's ink set renders QR codes with sharp edges essential for reliable scanning. Confirm gloss coating does not reduce contrast below scanner threshold." },
+    { title: "Monitor scan analytics",     desc: "Track scan volume, time, and location via your QR dashboard. Use this data to optimise the landing experience and inform future print runs." },
   ],
   Personalized: [
-    { title: "Compile recipient data", desc: "Gather your mailing list with first name, personalisation fields, and any segmentation attributes. Validate data quality — names should be title-case, no truncation." },
-    { title: "Design the personalisation zone", desc: "Reserve a defined area on the artwork for the personalised name/message. Use a font ≥ 12pt for legibility, HP Indigo renders variable text at full press quality." },
-    { title: "Map fields in SmartStream", desc: "In HP SmartStream Designer, import your data file and map each personalised element. Preview at least 10 records to confirm correct rendering across edge cases." },
-    { title: "Colour-manage for consistency", desc: "Use ICC profiles matched to your substrate. HP Indigo's digital offset process ensures colour consistency between personalised and non-personalised elements — request a proof." },
-    { title: "Run press production", desc: "Schedule the job with your HP Indigo operator. Confirm substrate weight, finish (matte/silk/gloss), and gang-up or individual sheet format." },
-    { title: "Dispatch & measure response", desc: "Match dispatch records to your CRM. Personalised print typically delivers 2–5× higher response rates — set up UTM tracking on any digital touchpoints to close the loop." },
+    { title: "Compile recipient data",        desc: "Gather your mailing list with first name, personalisation fields, and segmentation attributes. Validate data quality — names should be title-case, no truncation." },
+    { title: "Design the personalisation zone", desc: "Reserve a defined area on the artwork for the personalised name/message. Use a font 12pt or larger for legibility. HP Indigo renders variable text at full press quality." },
+    { title: "Map fields in SmartStream",     desc: "In HP SmartStream Designer, import your data file and map each personalised element. Preview at least 10 records to confirm correct rendering across edge cases." },
+    { title: "Colour-manage for consistency", desc: "Use ICC profiles matched to your substrate. HP Indigo's digital offset process ensures colour consistency between personalised and static elements — request a proof." },
+    { title: "Run press production",          desc: "Schedule the job with your HP Indigo operator. Confirm substrate weight, finish (matte/silk/gloss), and gang-up or individual sheet format." },
+    { title: "Dispatch and measure response", desc: "Match dispatch records to your CRM. Personalised print typically delivers 2-5x higher response rates — set up UTM tracking on digital touchpoints to close the loop." },
   ],
 };
 
-// ─── Colour per strategy ─────────────────────────────────────────────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
-const strategyColour: Record<string, { bg: string; text: string }> = {
-  VDP:          { bg: "#E6F4FA", text: HP_BLUE_DARK },
-  QR:           { bg: "#ECFDF5", text: "#065F46" },
-  Personalized: { bg: "#FFF7ED", text: "#C2410C" },
+function TopBar({ title, sub, right }: { title: string; sub: string; right: string }) {
+  return (
+    <View style={s.topBar} fixed>
+      <View style={s.topBarLeft}>
+        <View style={s.topBarLogo}>
+          <Text style={s.topBarLogoText}>HP</Text>
+        </View>
+        <View>
+          <Text style={s.topBarTitle}>{title}</Text>
+          <Text style={s.topBarSub}>{sub}</Text>
+        </View>
+      </View>
+      <Text style={s.topBarDate}>{right}</Text>
+    </View>
+  );
+}
+
+function Footer({ left }: { left: string }) {
+  return (
+    <View style={s.footer} fixed>
+      <Text style={s.footerText}>{left}</Text>
+      <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+    </View>
+  );
+}
+
+function SpecRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[s.specRow, { borderBottomWidth: last ? 0 : 1, borderBottomColor: BORDER }]}>
+      <View style={s.specRowLabel}><Text style={s.specRowLabelText}>{label}</Text></View>
+      <View style={s.specRowValue}><Text style={s.specRowValueText}>{value || "—"}</Text></View>
+    </View>
+  );
+}
+
+function TwoColRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={{ flexDirection: "row", borderBottomWidth: last ? 0 : 1, borderBottomColor: BORDER }}>
+      <View style={s.tcLabel}><Text style={s.tcLabelText}>{label}</Text></View>
+      <View style={s.tcValue}><Text style={s.tcValueText}>{value || "—"}</Text></View>
+    </View>
+  );
+}
+
+function MiniSectionLabel({ children }: { children: string }) {
+  return (
+    <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: HP_MID, letterSpacing: 0.5, marginBottom: 6, marginTop: 2 }}>
+      {children.toUpperCase()}
+    </Text>
+  );
+}
+
+// ─── PackagingSpec type ───────────────────────────────────────────────────────
+
+type PackagingSpec = {
+  type: string;
+  label: string;
+  width: number;
+  height: number;
+  depth?: number;
+  unit: string;
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Idea card (campaign brief page) ─────────────────────────────────────────
 
-function IdeaCard({ idea, index, brandName }: { idea: Idea; index: number; brandName: string }) {
-  const sc = strategyColour[idea.strategy_type] ?? strategyColour.VDP;
-  const steps = execSteps[idea.strategy_type] ?? execSteps.VDP;
+function IdeaCard({ idea, index, packagingSpec }: {
+  idea: Idea;
+  index: number;
+  packagingSpec?: PackagingSpec | null;
+}) {
+  const sc    = STRATEGY_COLOUR[idea.strategy_type] ?? STRATEGY_COLOUR.VDP;
+  const steps = EXEC_STEPS[idea.strategy_type] ?? EXEC_STEPS.VDP;
   const revisions = idea.feedback_history?.length ?? 0;
+  const dims = packagingSpec && packagingSpec.type !== "none"
+    ? (packagingSpec.depth
+        ? `${packagingSpec.width} x ${packagingSpec.height} x ${packagingSpec.depth} ${packagingSpec.unit}`
+        : `${packagingSpec.width} x ${packagingSpec.height} ${packagingSpec.unit}`)
+    : null;
 
   return (
-    <View style={s.ideaWrapper} wrap={false}>
-      {/* Card header */}
-      <View style={s.ideaHeader}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, color: MUTED }}>
-            IDEA {index + 1}
-          </Text>
-          <View style={[s.ideaStrategyPill, { backgroundColor: sc.bg }]}>
-            <Text style={[s.ideaStrategyText, { color: sc.text }]}>
-              {idea.strategy_type === "VDP" ? "Variable Data" : idea.strategy_type === "QR" ? "QR Integration" : "Personalized"}
+    // break forces each idea (after the first) onto a new page
+    <View style={s.ideaWrapper} break={index > 0}>
+
+      {/* Header — always keep together */}
+      <View style={s.ideaHeader} wrap={false}>
+        <View style={s.ideaHeaderLeft}>
+          <Text style={s.ideaNum}>IDEA {index + 1}</Text>
+          <View style={[s.strategyPill, { backgroundColor: sc.bg }]}>
+            <Text style={[s.strategyPillText, { color: sc.text }]}>
+              {STRATEGY_LABEL[idea.strategy_type] ?? idea.strategy_type}
             </Text>
           </View>
         </View>
@@ -269,24 +392,27 @@ function IdeaCard({ idea, index, brandName }: { idea: Idea; index: number; brand
       </View>
 
       <View style={s.ideaBody}>
-        {/* Title & description */}
-        <Text style={s.ideaTitle}>{idea.title}</Text>
-        <Text style={s.ideaDesc}>{idea.description}</Text>
 
-        {/* Mockup image */}
+        {/* Title + description — keep together */}
+        <View wrap={false}>
+          <Text style={s.ideaTitle}>{idea.title}</Text>
+          <Text style={s.ideaDesc}>{idea.description}</Text>
+        </View>
+
+        {/* Mockup — cover crop like the app */}
         {idea.mockup_url && idea.mockup_url.startsWith("data:image") && (
-          <View style={s.mockupWrapper}>
+          <View style={s.mockupWrapper} wrap={false}>
             <Image src={idea.mockup_url} style={s.mockupImage} />
             <Text style={s.mockupCaption}>AI-generated packaging mockup — HP Indigo quality output</Text>
           </View>
         )}
 
-        {/* Feedback history */}
+        {/* Revision history */}
         {revisions > 0 && (
-          <View style={s.historySection}>
-            <Text style={s.historyLabel}>Revision history</Text>
+          <View style={s.historySection} wrap={false}>
+            <Text style={s.historyLabel}>REVISION HISTORY</Text>
             {idea.feedback_history?.map((fb, i) => (
-              <View key={i} style={s.historyItem}>
+              <View key={i} style={s.historyRow}>
                 <View style={s.historyDot} />
                 <Text style={s.historyText}>"{fb.text}"</Text>
                 <Text style={s.historyDate}>
@@ -297,20 +423,128 @@ function IdeaCard({ idea, index, brandName }: { idea: Idea; index: number; brand
           </View>
         )}
 
-        {/* Execution guide */}
+        {/* Packaging spec */}
+        {packagingSpec && packagingSpec.type !== "none" && (
+          <View style={{ marginTop: 14, borderWidth: 1, borderColor: HP_BLUE, borderRadius: 6, overflow: "hidden" }} wrap={false}>
+            <View style={s.specTableHeader}>
+              <Text style={s.specTableHeaderText}>Packaging Specifications — HP Indigo 6900</Text>
+            </View>
+            <SpecRow label="Packaging type" value={packagingSpec.label} />
+            <SpecRow label="Dimensions"     value={dims ?? ""} />
+            <SpecRow label="Bleed"          value="3 mm (all edges)" />
+            <SpecRow label="Safe zone"      value="3 mm inset from trim" />
+            <SpecRow label="HP Indigo"      value="HP Indigo 6900 Digital Press" />
+            <SpecRow label="Max sheet"      value="317 x 464 mm" />
+            <SpecRow label="Colour space"   value="CMYK + HP IndiChrome (6-colour)" />
+            <SpecRow label="Resolution"     value="300 DPI minimum" />
+            <SpecRow label="File format"    value="PDF/X-4, fonts embedded" last />
+          </View>
+        )}
+
+        {/* Execution guide — context bar keeps idea identity visible if it falls on a new page */}
         <View style={s.execSection}>
-          <Text style={s.execTitle}>Execution guide — {idea.strategy_type} campaign</Text>
-          {steps.map((step, i) => (
-            <View key={i} style={s.execStep}>
-              <View style={s.execStepNum}>
-                <Text style={s.execStepNumText}>{i + 1}</Text>
+          {/* Context bar: always shows idea identity at top of this section */}
+          <View style={s.execContextBar} wrap={false}>
+            <Text style={s.execContextText}>
+              IDEA {index + 1}  —  {idea.title.toUpperCase()}  —  {STRATEGY_LABEL[idea.strategy_type] ?? idea.strategy_type} STRATEGY
+            </Text>
+          </View>
+          <Text style={s.execTitle}>EXECUTION GUIDE</Text>
+          {/* Title + first step kept together so heading never orphans */}
+          <View wrap={false}>
+            <View style={s.execRow}>
+              <View style={s.execNumBox}><Text style={s.execNumText}>1</Text></View>
+              <View style={s.execStepBody}>
+                <Text style={s.execStepTitle}>{steps[0].title}</Text>
+                <Text style={s.execStepDesc}>{steps[0].desc}</Text>
               </View>
+            </View>
+          </View>
+          {steps.slice(1).map((step, i) => (
+            <View key={i + 1} style={s.execRow} wrap={false}>
+              <View style={s.execNumBox}><Text style={s.execNumText}>{i + 2}</Text></View>
               <View style={s.execStepBody}>
                 <Text style={s.execStepTitle}>{step.title}</Text>
                 <Text style={s.execStepDesc}>{step.desc}</Text>
               </View>
             </View>
           ))}
+        </View>
+
+      </View>
+    </View>
+  );
+}
+
+// ─── Tech spec block (print spec page) ───────────────────────────────────────
+
+const ARTWORK_SPECS = [
+  { label: "Bleed",        value: "3 mm (all edges)" },
+  { label: "Safe zone",    value: "3 mm inset from trim edge" },
+  { label: "Resolution",   value: "300 DPI minimum" },
+  { label: "File format",  value: "PDF/X-4" },
+  { label: "Fonts",        value: "Embedded (no subset)" },
+  { label: "HP Indigo",    value: "HP Indigo 6900 Digital Press" },
+  { label: "Max sheet",    value: "317 x 464 mm" },
+  { label: "Colour space", value: "CMYK + HP IndiChrome (6-colour)" },
+];
+
+function TechSpecBlock({ idea, index, packagingSpec, productionSpec }: {
+  idea: Idea;
+  index: number;
+  packagingSpec?: PackagingSpec | null;
+  productionSpec: ProductionSpec;
+}) {
+  const spec = { ...DEFAULT_PRODUCTION_SPEC, ...productionSpec };
+  const sc   = STRATEGY_COLOUR[idea.strategy_type] ?? STRATEGY_COLOUR.VDP;
+  const dims = packagingSpec && packagingSpec.type !== "none"
+    ? (packagingSpec.depth
+        ? `${packagingSpec.width} x ${packagingSpec.height} x ${packagingSpec.depth} ${packagingSpec.unit}`
+        : `${packagingSpec.width} x ${packagingSpec.height} ${packagingSpec.unit}`)
+    : "—";
+
+  return (
+    <View style={{ marginHorizontal: 40, marginTop: 20, borderWidth: 1, borderColor: BORDER, borderRadius: 8, overflow: "hidden" }} wrap={false}>
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: COOL_GREY, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BORDER }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, color: MUTED, marginRight: 10 }}>IDEA {index + 1}</Text>
+          <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 11, color: DARK_SLATE }}>{idea.title}</Text>
+        </View>
+        <View style={[s.strategyPill, { backgroundColor: sc.bg }]}>
+          <Text style={[s.strategyPillText, { color: sc.text }]}>{STRATEGY_LABEL[idea.strategy_type]}</Text>
+        </View>
+      </View>
+
+      {/* Two columns */}
+      <View style={{ flexDirection: "row", padding: 14 }}>
+        {/* Left: Packaging + Colour */}
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <MiniSectionLabel>Packaging</MiniSectionLabel>
+          <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
+            <TwoColRow label="Type"       value={packagingSpec?.label ?? "—"} />
+            <TwoColRow label="Dimensions" value={dims} />
+            <TwoColRow label="Substrate"  value={spec.substrate} />
+            <TwoColRow label="Finishing"  value={spec.finishing} last />
+          </View>
+
+          <MiniSectionLabel>Colour Management</MiniSectionLabel>
+          <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 4, overflow: "hidden" }}>
+            <TwoColRow label="ICC Profile"      value={spec.iccProfile} />
+            <TwoColRow label="Rendering intent" value={spec.renderingIntent} />
+            <TwoColRow label="Overprint"        value={spec.overprint ? "Enabled" : "Disabled"} />
+            <TwoColRow label="Spot colour"      value={spec.spotColour || "None"} last />
+          </View>
+        </View>
+
+        {/* Right: Artwork Specs */}
+        <View style={{ flex: 1 }}>
+          <MiniSectionLabel>Artwork Specifications</MiniSectionLabel>
+          <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 4, overflow: "hidden" }}>
+            {ARTWORK_SPECS.map((row, i) => (
+              <TwoColRow key={row.label} label={row.label} value={row.value} last={i === ARTWORK_SPECS.length - 1} />
+            ))}
+          </View>
         </View>
       </View>
     </View>
@@ -319,10 +553,17 @@ function IdeaCard({ idea, index, brandName }: { idea: Idea; index: number; brand
 
 // ─── Main document ────────────────────────────────────────────────────────────
 
-export function CampaignPDF({ campaign, ideas }: { campaign: Campaign; ideas: Idea[] }) {
+export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs }: {
+  campaign: Campaign;
+  ideas: Idea[];
+  packagingSpecs?: Record<string, PackagingSpec>;
+  productionSpecs?: Record<string, ProductionSpec>;
+}) {
   const date = new Date(campaign.created_at).toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric",
   });
+
+  const strategyTypes = [...new Set(ideas.map((i) => STRATEGY_LABEL[i.strategy_type] ?? i.strategy_type))].join(", ");
 
   return (
     <Document
@@ -330,55 +571,104 @@ export function CampaignPDF({ campaign, ideas }: { campaign: Campaign; ideas: Id
       author="HP Spark"
       subject="Digital Printing Campaign Brief"
     >
-      <Page size="A4" style={s.page}>
-        {/* Top bar */}
-        <View style={s.coverBand} fixed>
-          <View style={s.coverBrandGroup}>
-            <View style={s.coverLogo}>
+      {/* ── Cover page ── */}
+      <Page size="A4" style={{ fontFamily: "Helvetica", backgroundColor: WHITE }}>
+        <View style={s.coverPage}>
+          {/* Top */}
+          <View>
+            <View style={s.coverLogoBox}>
               <Text style={s.coverLogoText}>HP</Text>
             </View>
-            <View>
-              <Text style={s.coverTitle}>HP Spark — Campaign Brief</Text>
-              <Text style={s.coverSub}>HP Indigo Digital Printing · Marketing Ideation Platform</Text>
+            <Text style={s.coverLabel}>HP CAMPAIGN STUDIO</Text>
+            <Text style={s.coverBrandName}>{campaign.brand_name}</Text>
+            <Text style={s.coverSubtitle}>Digital Packaging Campaign Brief</Text>
+            <View style={s.coverDivider} />
+            <View style={s.coverMeta}>
+              <View style={s.coverMetaItem}>
+                <Text style={s.coverMetaLabel}>CAMPAIGN IDEAS</Text>
+                <Text style={s.coverMetaValue}>{ideas.length}</Text>
+              </View>
+              <View style={s.coverMetaItem}>
+                <Text style={s.coverMetaLabel}>STRATEGIES</Text>
+                <Text style={s.coverMetaValue}>{strategyTypes}</Text>
+              </View>
+              <View style={s.coverMetaItem}>
+                <Text style={s.coverMetaLabel}>GENERATED</Text>
+                <Text style={s.coverMetaValue}>{date}</Text>
+              </View>
             </View>
           </View>
-          <Text style={s.coverDate}>Generated {date}</Text>
-        </View>
 
-        {/* Campaign hero */}
+          {/* Bottom */}
+          <View>
+            <View style={s.coverDivider} />
+            <Text style={s.coverFooter}>
+              HP Spark — Powered by HP Indigo Digital Printing Technology{"\n"}
+              Confidential — prepared for {campaign.brand_name}
+            </Text>
+          </View>
+        </View>
+      </Page>
+
+      {/* ── Campaign brief page ── */}
+      <Page size="A4" style={s.page}>
+        <TopBar
+          title="HP Spark — Campaign Brief"
+          sub="HP Indigo Digital Printing"
+          right={`Generated ${date}`}
+        />
+
+        {/* Hero */}
         <View style={s.hero}>
-          <Text style={s.heroLabel}>Brand</Text>
+          <Text style={s.heroLabel}>BRAND</Text>
           <Text style={s.heroBrand}>{campaign.brand_name}</Text>
           {campaign.brand_context && (
             <Text style={s.heroContext}>{campaign.brand_context}</Text>
           )}
           <View style={s.heroBadge}>
-            <View style={s.badge}>
-              <Text style={s.badgeText}>{ideas.length} Campaign Ideas</Text>
-            </View>
-            <View style={[s.badge, { backgroundColor: "#065F46" }]}>
-              <Text style={s.badgeText}>HP Indigo Ready</Text>
-            </View>
+            <Text style={s.heroBadgeText}>HP Indigo Ready</Text>
           </View>
         </View>
 
-        {/* Section header */}
-        <View style={s.sectionHeader}>
-          <Text style={s.sectionHeaderText}>Campaign Ideas &amp; Execution Briefs</Text>
+        <View style={s.sectionBar}>
+          <Text style={s.sectionBarText}>CAMPAIGN IDEAS AND EXECUTION BRIEFS</Text>
         </View>
 
-        {/* Ideas */}
         {ideas.map((idea, i) => (
-          <IdeaCard key={idea.id} idea={idea} index={i} brandName={campaign.brand_name ?? ""} />
+          <IdeaCard
+            key={idea.id}
+            idea={idea}
+            index={i}
+            packagingSpec={packagingSpecs?.[idea.id]}
+          />
         ))}
 
-        {/* Footer */}
-        <View style={s.footer} fixed>
-          <Text style={s.footerLeft}>HP Spark — Confidential Campaign Brief · {campaign.brand_name}</Text>
-          <Text style={s.footerRight} render={({ pageNumber, totalPages }) =>
-            `Page ${pageNumber} of ${totalPages}`
-          } />
+        <Footer left={`HP Spark — Campaign Brief  |  ${campaign.brand_name}`} />
+      </Page>
+
+      {/* ── Technical Print Specification page ── */}
+      <Page size="A4" style={s.page}>
+        <TopBar
+          title="HP Spark — Technical Print Specification"
+          sub="HP Indigo 6900 — Production-ready specs"
+          right={campaign.brand_name ?? ""}
+        />
+
+        <View style={s.sectionBar}>
+          <Text style={s.sectionBarText}>TECHNICAL PRINT SPECIFICATION — ALL IDEAS</Text>
         </View>
+
+        {ideas.map((idea, i) => (
+          <TechSpecBlock
+            key={idea.id}
+            idea={idea}
+            index={i}
+            packagingSpec={packagingSpecs?.[idea.id]}
+            productionSpec={productionSpecs?.[idea.id] ?? DEFAULT_PRODUCTION_SPEC}
+          />
+        ))}
+
+        <Footer left={`HP Spark — Technical Print Specification  |  ${campaign.brand_name}`} />
       </Page>
     </Document>
   );

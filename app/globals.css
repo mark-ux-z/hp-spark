@@ -1,14 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #212121;
+  --hp-blue: #0096D6;
+  --hp-dark: #002D72;
+  --hp-mid: #005B99;
+  --bg: #F4F6F9;
+  --surface: #ffffff;
+  --border: #E2E6EE;
+  --text: #0F1B2D;
+  --muted: #5C6B82;
+  --light: #EAF5FC;
+  --success: #00A878;
+  --warm: #F7941D;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Segoe UI', 'SF Pro Display', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans, 'DM Sans'), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-serif {
+  font-family: var(--font-serif, 'DM Serif Display'), serif;
 }
 
 @keyframes progress {
@@ -16,7 +30,20 @@ body {
   50% { width: 70%; }
   100% { width: 95%; }
 }
+.animate-progress { animation: progress 2.5s ease-in-out infinite; }
 
-.animate-progress {
-  animation: progress 2.5s ease-in-out infinite;
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
+.shimmer {
+  background: linear-gradient(90deg, #e2e6ee 25%, #f4f6f9 50%, #e2e6ee 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.4s ease forwards; }
