@@ -10,6 +10,25 @@ import { getSettings, saveSettings } from "@/lib/supabase";
 import { EUROPEAN_COUNTRIES } from "@/lib/partners";
 import type { NavTab } from "@/lib/types";
 
+function formatEuro(val: string): string {
+  const n = parseFloat(val);
+  if (!val || isNaN(n)) return "";
+  return `€${n.toLocaleString("en-GB")}`;
+}
+
+function calcCostPerUnit(min: string, max: string, run: string): string | null {
+  const bMin = parseFloat(min);
+  const bMax = parseFloat(max);
+  const r    = parseFloat(run);
+  if (!r || r <= 0 || (isNaN(bMin) && isNaN(bMax))) return null;
+  const lo = !isNaN(bMin) ? bMin / r : null;
+  const hi = !isNaN(bMax) ? bMax / r : null;
+  if (lo !== null && hi !== null) return `€${lo.toFixed(3)} – €${hi.toFixed(3)} per unit`;
+  if (lo !== null) return `€${lo.toFixed(3)} per unit`;
+  if (hi !== null) return `€${hi.toFixed(3)} per unit`;
+  return null;
+}
+
 const SEASONS = ["Christmas / Winter", "Summer", "Easter / Spring", "Always-on"];
 const AUDIENCES = ["Millennials 25–40", "Families with children", "Gen Z 18–25", "Premium / gifting"];
 
@@ -70,6 +89,9 @@ function HomeInner() {
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const [budgetMin, setBudgetMin] = useState("");
+  const [budgetMax, setBudgetMax] = useState("");
+  const [runSize, setRunSize] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,16 +156,18 @@ function HomeInner() {
       setLoadingStep(3);
       await new Promise((r) => setTimeout(r, 400));
 
-      // Save campaign name + countries to localStorage + Supabase settings
-      if (campaignName.trim() || selectedCountries.length > 0) {
+      // Save campaign name, countries, and budget to localStorage + Supabase settings
+      {
         const names = JSON.parse(localStorage.getItem("campaign_names") ?? "{}");
         if (campaignName.trim()) names[data.campaignId!] = campaignName.trim();
         localStorage.setItem("campaign_names", JSON.stringify(names));
         // Persist to Supabase (fire and forget)
         getSettings().then((settings) => {
+          const hasBudget = budgetMin || budgetMax || runSize;
           return saveSettings({
             ...(campaignName.trim() ? { campaignNames: { ...(settings.campaignNames ?? {}), [data.campaignId!]: campaignName.trim() } } : {}),
             ...(selectedCountries.length > 0 ? { campaignCountries: { ...(settings.campaignCountries ?? {}), [data.campaignId!]: selectedCountries } } : {}),
+            ...(hasBudget ? { campaignBudgets: { ...(settings.campaignBudgets ?? {}), [data.campaignId!]: { budgetMin, budgetMax, runSize } } } : {}),
           });
         }).catch(console.error);
       }
@@ -336,6 +360,74 @@ function HomeInner() {
                         >×</button>
                       </span>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Production cost range */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>
+                  Production cost range
+                  <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>optional</span>
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                  {/* Budget min */}
+                  <div>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Budget min (€)</p>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--muted)", pointerEvents: "none" }}>€</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={budgetMin}
+                        onChange={(e) => setBudgetMin(e.target.value)}
+                        placeholder="e.g. 2000"
+                        style={{ ...selectStyle, backgroundImage: "none", paddingLeft: 24, paddingRight: 12 }}
+                      />
+                    </div>
+                  </div>
+                  {/* Budget max */}
+                  <div>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Budget max (€)</p>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--muted)", pointerEvents: "none" }}>€</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={budgetMax}
+                        onChange={(e) => setBudgetMax(e.target.value)}
+                        placeholder="e.g. 5000"
+                        style={{ ...selectStyle, backgroundImage: "none", paddingLeft: 24, paddingRight: 12 }}
+                      />
+                    </div>
+                  </div>
+                  {/* Run size */}
+                  <div>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Expected run size (units)</p>
+                    <input
+                      type="number"
+                      min="1"
+                      step="500"
+                      value={runSize}
+                      onChange={(e) => setRunSize(e.target.value)}
+                      placeholder="e.g. 5000"
+                      style={{ ...selectStyle, backgroundImage: "none", paddingRight: 12 }}
+                    />
+                  </div>
+                </div>
+                {/* Live cost per unit estimate */}
+                {calcCostPerUnit(budgetMin, budgetMax, runSize) && (
+                  <div style={{
+                    marginTop: 8, padding: "8px 12px",
+                    background: "var(--light)", borderRadius: 6,
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Est. cost per unit:</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--hp-blue)" }}>
+                      {calcCostPerUnit(budgetMin, budgetMax, runSize)}
+                    </span>
                   </div>
                 )}
               </div>

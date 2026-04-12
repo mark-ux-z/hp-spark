@@ -7,7 +7,7 @@ import TopBar from "@/components/TopBar";
 import IdeaCard, { PackagingSpec } from "@/components/IdeaCard";
 import ChatSidebar from "@/components/ChatSidebar";
 import SpecPanel from "@/components/SpecPanel";
-import { supabase, Campaign, Idea, saveIdeaSpecs, getSettings, saveSettings } from "@/lib/supabase";
+import { supabase, Campaign, Idea, saveIdeaSpecs, getSettings, saveSettings, CampaignBudget } from "@/lib/supabase";
 import { getPartnersForCountries } from "@/lib/partners";
 import {
   CampaignStatus,
@@ -40,6 +40,7 @@ export default function CampaignPage() {
   const [selectedSpecIdea, setSelectedSpecIdea] = useState<Idea | null>(null);
   const [campaignStatus, setCampaignStatus] = useState<CampaignStatus>("ideation");
   const [campaignCountries, setCampaignCountries] = useState<string[]>([]);
+  const [campaignBudget, setCampaignBudget] = useState<CampaignBudget | null>(null);
 
   const fetchData = useCallback(async () => {
     const [{ data: campaignData }, { data: ideasData }] = await Promise.all([
@@ -69,6 +70,7 @@ export default function CampaignPage() {
     const statusFromLocal = (JSON.parse(localStorage.getItem("campaign_statuses") ?? "{}") as Record<string, CampaignStatus>)[id];
     setCampaignStatus(statusFromDB ?? statusFromLocal ?? "ideation");
     setCampaignCountries(settings.campaignCountries?.[id] ?? []);
+    setCampaignBudget(settings.campaignBudgets?.[id] ?? null);
 
     setLoading(false);
   }, [id]);
@@ -163,7 +165,7 @@ export default function CampaignPage() {
       const res = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId: campaign.id, packagingSpecs, productionSpecs }),
+        body: JSON.stringify({ campaignId: campaign.id, packagingSpecs, productionSpecs, budget: campaignBudget }),
       });
       if (!res.ok) throw new Error("PDF generation failed");
       const blob = await res.blob();
@@ -335,6 +337,52 @@ export default function CampaignPage() {
               ))}
             </div>
           )}
+
+          {/* ── Budget overview ── */}
+          {campaignBudget && (campaignBudget.budgetMin || campaignBudget.budgetMax || campaignBudget.runSize) && (() => {
+            const { budgetMin, budgetMax, runSize } = campaignBudget;
+            const bMin = parseFloat(budgetMin);
+            const bMax = parseFloat(budgetMax);
+            const run  = parseFloat(runSize);
+            const cpuLo = (!isNaN(bMin) && !isNaN(run) && run > 0) ? (bMin / run) : null;
+            const cpuHi = (!isNaN(bMax) && !isNaN(run) && run > 0) ? (bMax / run) : null;
+            const budgetLabel = (budgetMin && budgetMax)
+              ? `€${Number(bMin).toLocaleString("en-GB")} – €${Number(bMax).toLocaleString("en-GB")}`
+              : budgetMin ? `From €${Number(bMin).toLocaleString("en-GB")}`
+              : budgetMax ? `Up to €${Number(bMax).toLocaleString("en-GB")}`
+              : "—";
+            const cpuLabel = (cpuLo !== null && cpuHi !== null)
+              ? `€${cpuLo.toFixed(3)} – €${cpuHi.toFixed(3)}`
+              : cpuLo !== null ? `€${cpuLo.toFixed(3)}`
+              : cpuHi !== null ? `€${cpuHi.toFixed(3)}`
+              : "—";
+            return (
+              <div style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 14, textTransform: "uppercase" }}>
+                  Production Budget Overview
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                  {[
+                    { label: "Total budget", value: budgetLabel, accent: false },
+                    { label: "Expected run size", value: runSize ? `${Number(run).toLocaleString("en-GB")} units` : "—", accent: false },
+                    { label: "Est. cost per unit", value: cpuLabel !== "—" ? cpuLabel : "—", accent: cpuLabel !== "—" },
+                  ].map((stat) => (
+                    <div key={stat.label} style={{
+                      background: "white", borderRadius: 10, border: `1px solid var(--border)`,
+                      padding: "16px 20px",
+                    }}>
+                      <p style={{ fontSize: 11, color: "var(--muted)", fontWeight: 500, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        {stat.label}
+                      </p>
+                      <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: stat.accent ? "var(--hp-blue)" : "var(--text)" }}>
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── HP Digital vs Traditional comparison ── */}
           <div style={{ marginBottom: 40 }}>
