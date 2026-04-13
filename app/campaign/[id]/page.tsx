@@ -165,7 +165,7 @@ export default function CampaignPage() {
       const res = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId: campaign.id, packagingSpecs, productionSpecs, budget: campaignBudget }),
+        body: JSON.stringify({ campaignId: campaign.id, packagingSpecs, productionSpecs, budget: campaignBudget, countries: campaignCountries }),
       });
       if (!res.ok) throw new Error("PDF generation failed");
       const blob = await res.blob();

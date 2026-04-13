@@ -1,11 +1,14 @@
 export type Partner = {
   name: string;
   city: string;
-  code: string; // ISO country code for display
+  code: string;    // ISO country code for display
+  country: string; // full country name, injected by getPartnersForCountries
 };
 
+type PartnerEntry = Omit<Partner, "country">;
+
 // Hardcoded HP Indigo–certified print partners per European country
-export const PARTNERS_BY_COUNTRY: Record<string, Partner[]> = {
+export const PARTNERS_BY_COUNTRY: Record<string, PartnerEntry[]> = {
   "United Kingdom": [
     { name: "Precision Colour Printing",   city: "Telford",     code: "GB" },
     { name: "Bluetree Group",              city: "Sheffield",   code: "GB" },
@@ -116,5 +119,7 @@ export const PARTNERS_BY_COUNTRY: Record<string, Partner[]> = {
 export const EUROPEAN_COUNTRIES = Object.keys(PARTNERS_BY_COUNTRY).sort();
 
 export function getPartnersForCountries(countries: string[]): Partner[] {
-  return countries.flatMap((c) => PARTNERS_BY_COUNTRY[c] ?? []);
+  return countries.flatMap((c) =>
+    (PARTNERS_BY_COUNTRY[c] ?? []).map((p) => ({ ...p, country: c }))
+  );
 }

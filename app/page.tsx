@@ -432,71 +432,76 @@ function HomeInner() {
                 )}
               </div>
 
-              {/* Colour picker — visible input + Add button */}
+              {/* Colour picker — palette + custom */}
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}>
                   Brand colours
                   <span style={{ fontWeight: 400, color: "var(--muted)", marginLeft: 6 }}>pick one or more</span>
                 </label>
 
-                {/* Added swatches */}
+                {/* Selected swatches */}
                 {brandColors.length > 0 && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                     {brandColors.map((color, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 6,
-                          background: "var(--bg)", border: "1px solid var(--border)",
-                          borderRadius: 8, padding: "4px 10px 4px 6px",
-                        }}
-                      >
-                        <div style={{
-                          width: 20, height: 20, borderRadius: 4, background: color,
-                          border: "1px solid rgba(0,0,0,0.12)", flexShrink: 0,
-                        }} />
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px 4px 6px" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 4, background: color, border: "1px solid rgba(0,0,0,0.12)", flexShrink: 0 }} />
                         <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "monospace" }}>{color}</span>
-                        <button
-                          onClick={() => setBrandColors((p) => p.filter((_, j) => j !== i))}
-                          style={{
-                            background: "none", border: "none", cursor: "pointer",
-                            color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 0,
-                            marginLeft: 2,
-                          }}
-                        >×</button>
+                        <button onClick={() => setBrandColors((p) => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2 }}>×</button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Picker row */}
+                {/* Preset palette grid */}
+                <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", background: "#fafbfc", marginBottom: 10 }}>
+                  <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8, fontWeight: 500 }}>Preset palette — click to add</p>
+                  {[
+                    ["#000000","#1a1a1a","#333333","#555555","#777777","#999999","#bbbbbb","#dddddd","#f5f5f5","#ffffff"],
+                    ["#7f1d1d","#b91c1c","#dc2626","#ef4444","#f97316","#fb923c","#fbbf24","#fde68a","#fef9c3","#fffbeb"],
+                    ["#14532d","#166534","#16a34a","#22c55e","#4ade80","#065f46","#047857","#059669","#34d399","#a7f3d0"],
+                    ["#1e3a5f","#1d4ed8","#2563eb","#3b82f6","#60a5fa","#0096D6","#0073A8","#002D72","#7c3aed","#8b5cf6"],
+                    ["#831843","#be185d","#db2777","#ec4899","#f472b6","#6b21a8","#9333ea","#a855f7","#c084fc","#e879f9"],
+                    ["#78350f","#92400e","#b45309","#d97706","#f59e0b","#fcd34d","#0f766e","#0d9488","#14b8a6","#2dd4bf"],
+                  ].map((row, ri) => (
+                    <div key={ri} style={{ display: "flex", gap: 5, marginBottom: ri < 5 ? 5 : 0 }}>
+                      {row.map((hex) => {
+                        const already = brandColors.includes(hex);
+                        return (
+                          <button
+                            key={hex}
+                            type="button"
+                            title={hex}
+                            onClick={() => { if (!already) setBrandColors((p) => [...p, hex]); }}
+                            style={{
+                              width: 28, height: 28, borderRadius: 5, background: hex, flexShrink: 0,
+                              border: already ? "2.5px solid var(--hp-blue)" : "1.5px solid rgba(0,0,0,0.12)",
+                              cursor: already ? "default" : "pointer",
+                              outline: already ? "2px solid white" : "none",
+                              outlineOffset: "-4px",
+                              transition: "transform 0.1s",
+                              boxShadow: hex === "#ffffff" ? "inset 0 0 0 1px #ddd" : "none",
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Custom picker row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <input
                     type="color"
                     value={pickerValue}
                     onChange={(e) => setPickerValue(e.target.value)}
-                    style={{
-                      width: 44, height: 40, borderRadius: 8, border: "1.5px solid var(--border)",
-                      padding: 3, cursor: "pointer", background: "white", flexShrink: 0,
-                    }}
+                    style={{ width: 44, height: 40, borderRadius: 8, border: "1.5px solid var(--border)", padding: 3, cursor: "pointer", background: "white", flexShrink: 0 }}
                   />
-                  <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "monospace", minWidth: 68 }}>
-                    {pickerValue}
-                  </span>
+                  <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "monospace", minWidth: 68 }}>{pickerValue}</span>
                   <button
-                    onClick={() => {
-                      if (!brandColors.includes(pickerValue)) {
-                        setBrandColors((p) => [...p, pickerValue]);
-                      }
-                    }}
-                    style={{
-                      padding: "8px 16px", borderRadius: 8,
-                      border: "1.5px solid var(--border)", background: "white",
-                      fontSize: 13, fontWeight: 500, color: "var(--text)", cursor: "pointer",
-                      transition: "border-color 0.15s",
-                    }}
+                    onClick={() => { if (!brandColors.includes(pickerValue)) setBrandColors((p) => [...p, pickerValue]); }}
+                    style={{ padding: "8px 16px", borderRadius: 8, border: "1.5px solid var(--border)", background: "white", fontSize: 13, fontWeight: 500, color: "var(--text)", cursor: "pointer" }}
                   >
-                    + Add colour
+                    + Custom colour
                   </button>
                 </div>
               </div>

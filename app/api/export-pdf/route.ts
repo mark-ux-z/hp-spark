@@ -6,7 +6,7 @@ import { CampaignPDF } from "@/lib/pdf-template";
 
 export async function POST(req: NextRequest) {
   try {
-    const { campaignId, packagingSpecs, productionSpecs, budget } = await req.json();
+    const { campaignId, packagingSpecs, productionSpecs, budget, countries } = await req.json();
     if (!campaignId) {
       return NextResponse.json({ error: "campaignId is required" }, { status: 400 });
     }
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       packagingSpecs: packagingSpecs ?? {},
       productionSpecs: productionSpecs ?? {},
       budget: budget ?? null,
+      countries: countries ?? [],
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
