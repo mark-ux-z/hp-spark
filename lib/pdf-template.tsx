@@ -9,6 +9,7 @@ import {
 } from "@react-pdf/renderer";
 import { Idea, Campaign, CampaignBudget } from "./supabase";
 import { ProductionSpec, DEFAULT_PRODUCTION_SPEC } from "./types";
+import { getPartnersForCountries } from "./partners";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -139,8 +140,7 @@ const s = StyleSheet.create({
     marginTop: 16,
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 8,
-    overflow: "hidden",
+    borderRadius: 6,
   },
   ideaHeader: {
     flexDirection: "row",
@@ -148,9 +148,11 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: COOL_GREY,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
   },
   ideaHeaderLeft: { flexDirection: "row", alignItems: "center" },
   ideaNum:     { fontFamily: "Helvetica-Bold", fontSize: 8, color: MUTED, marginRight: 8 },
@@ -167,19 +169,17 @@ const s = StyleSheet.create({
 
   // ── Mockup ──
   mockupWrapper: {
-    marginTop: 14,
-    borderRadius: 6,
-    overflow: "hidden",
+    marginTop: 12,
     borderWidth: 1,
     borderColor: BORDER,
   },
   mockupImage: {
     width: "100%",
-    height: 210,
+    height: 180,
     objectFit: "cover",
-    objectPosition: "center",
+    objectPosition: "center center",
   },
-  mockupCaption: { fontSize: 7, color: MUTED, textAlign: "center", paddingVertical: 5, backgroundColor: COOL_GREY },
+  mockupCaption: { fontSize: 7, color: MUTED, textAlign: "center", paddingVertical: 4, backgroundColor: COOL_GREY },
 
   // ── Exec context bar (shows idea identity at top of execution section) ──
   execContextBar: {
@@ -504,7 +504,7 @@ function TechSpecBlock({ idea, index, packagingSpec, productionSpec }: {
     : "—";
 
   return (
-    <View style={{ marginHorizontal: 40, marginTop: 20, borderWidth: 1, borderColor: BORDER, borderRadius: 8, overflow: "hidden" }} wrap={false}>
+    <View style={{ marginHorizontal: 40, marginTop: 20, borderWidth: 1, borderColor: BORDER, borderRadius: 6 }} wrap={false}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: COOL_GREY, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BORDER }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -577,12 +577,13 @@ function budgetSummary(b: CampaignBudget | null | undefined): { range: string; r
   return { range, runSize: runLabel, cpu };
 }
 
-export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs, budget }: {
+export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs, budget, countries }: {
   campaign: Campaign;
   ideas: Idea[];
   packagingSpecs?: Record<string, PackagingSpec>;
   productionSpecs?: Record<string, ProductionSpec>;
   budget?: CampaignBudget | null;
+  countries?: string[];
 }) {
   const date = new Date(campaign.created_at).toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric",
@@ -590,6 +591,7 @@ export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs, 
 
   const strategyTypes = [...new Set(ideas.map((i) => STRATEGY_LABEL[i.strategy_type] ?? i.strategy_type))].join(", ");
   const budgetInfo = budgetSummary(budget);
+  const partners = getPartnersForCountries(countries ?? []);
 
   return (
     <Document
@@ -733,6 +735,87 @@ export function CampaignPDF({ campaign, ideas, packagingSpecs, productionSpecs, 
 
         <Footer left={`HP Spark — Technical Print Specification  |  ${campaign.brand_name}`} />
       </Page>
+
+      {/* ── HP Authorized PSP Locations page ── */}
+      {partners.length > 0 && (
+        <Page size="A4" style={s.page}>
+          <TopBar
+            title="HP Spark — Authorised Print Service Providers"
+            sub="HP Indigo Certified Partners"
+            right={campaign.brand_name ?? ""}
+          />
+
+          <View style={s.sectionBar}>
+            <Text style={s.sectionBarText}>
+              HP AUTHORISED PRINT SERVICE PROVIDERS
+              {(countries && countries.length > 0) ? `  —  ${countries.join(", ").toUpperCase()}` : ""}
+            </Text>
+          </View>
+
+          {/* Intro note */}
+          <View style={{ marginHorizontal: 40, marginTop: 16, marginBottom: 12 }}>
+            <Text style={{ fontSize: 9, color: MUTED, lineHeight: 1.6 }}>
+              The following HP Indigo-certified print partners are located in your selected operating countries.
+              Contact them directly to discuss substrate availability, run sizes, and HP IndiChrome colour profiles.
+            </Text>
+          </View>
+
+          {/* Partners grouped by country */}
+          {(countries ?? []).map((country) => {
+            const countryPartners = partners.filter((p) => p.country === country);
+            if (countryPartners.length === 0) return null;
+            return (
+              <View key={country} style={{ marginHorizontal: 40, marginBottom: 16 }}>
+                {/* Country heading */}
+                <View style={{ backgroundColor: HP_DARK, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, marginBottom: 1 }}>
+                  <Text style={{ color: WHITE, fontFamily: "Helvetica-Bold", fontSize: 9, letterSpacing: 0.5 }}>
+                    {country.toUpperCase()}
+                  </Text>
+                </View>
+                {/* Partner rows */}
+                {countryPartners.map((partner, i) => (
+                  <View
+                    key={partner.name}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      backgroundColor: i % 2 === 0 ? WHITE : COOL_GREY,
+                      borderBottomWidth: i < countryPartners.length - 1 ? 1 : 0,
+                      borderBottomColor: BORDER,
+                      borderLeftWidth: 1, borderRightWidth: 1,
+                      borderLeftColor: BORDER, borderRightColor: BORDER,
+                      ...(i === countryPartners.length - 1 ? { borderBottomWidth: 1, borderBottomColor: BORDER, borderBottomLeftRadius: 4, borderBottomRightRadius: 4 } : {}),
+                    }}
+                    wrap={false}
+                  >
+                    {/* Dot */}
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: HP_BLUE, marginRight: 10, flexShrink: 0 }} />
+                    {/* Name */}
+                    <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, color: DARK_SLATE, flex: 2 }}>{partner.name}</Text>
+                    {/* City */}
+                    <Text style={{ fontSize: 9, color: MUTED, flex: 1 }}>{partner.city}</Text>
+                    {/* Code badge */}
+                    <View style={{ backgroundColor: HP_BLUE, borderRadius: 3, paddingHorizontal: 6, paddingVertical: 2 }}>
+                      <Text style={{ color: WHITE, fontSize: 7, fontFamily: "Helvetica-Bold" }}>{partner.code}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+
+          {/* Footer note */}
+          <View style={{ marginHorizontal: 40, marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER }}>
+            <Text style={{ fontSize: 7.5, color: MUTED, lineHeight: 1.5 }}>
+              All partners are HP Indigo certified. Contact your HP representative or visit hp.com/indigo to verify certifications and current availability.
+            </Text>
+          </View>
+
+          <Footer left={`HP Spark — Authorised PSPs  |  ${campaign.brand_name}`} />
+        </Page>
+      )}
     </Document>
   );
 }
